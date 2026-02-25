@@ -4,6 +4,8 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
 
 export default function LoginPage() {
   return (
@@ -19,13 +21,31 @@ function LoginContent() {
   const errorMsg = searchParams.get('error')
 
   const handleOAuthLogin = async (provider: 'google' | 'kakao') => {
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/callback`,
-        ...(provider === 'kakao' && { scopes: 'profile_nickname profile_image' })
+    const isNative = Capacitor.isNativePlatform()
+
+    if (isNative) {
+      // 네이티브 앱: Chrome Custom Tab으로 OAuth 진행
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: 'com.aitarot.app://auth/callback',
+          skipBrowserRedirect: true,
+          ...(provider === 'kakao' && { scopes: 'profile_nickname profile_image' })
+        }
+      })
+      if (data?.url) {
+        await Browser.open({ url: data.url })
       }
-    })
+    } else {
+      // 웹: 기존 방식
+      await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/callback`,
+          ...(provider === 'kakao' && { scopes: 'profile_nickname profile_image' })
+        }
+      })
+    }
   }
 
   return (
