@@ -18,7 +18,7 @@ public class OAuthActivity extends AppCompatActivity {
         if (uri != null) {
             String query = uri.getQuery() != null ? uri.getQuery() : "";
             String fragment = uri.getFragment() != null ? "#" + uri.getFragment() : "";
-            String webUrl = "https://ai-tarot-app.vercel.app/auth/callback?" + query + fragment;
+            String webUrl = "https://tarot.trendhunt.net/auth/callback?" + query + fragment;
 
             Intent mainIntent = new Intent(this, MainActivity.class);
             mainIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);

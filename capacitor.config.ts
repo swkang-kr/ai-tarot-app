@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
     // 배포된 웹 URL (SSR 유지, Vercel 등)
     // 로컬 개발 시 아래 줄 주석 해제:
     // url: 'http://localhost:3000',
-    url: process.env.CAPACITOR_SERVER_URL || 'https://ai-tarot-app.vercel.app',
+    url: process.env.CAPACITOR_SERVER_URL || 'https://tarot.trendhunt.net',
     cleartext: false,
   },
   plugins: {

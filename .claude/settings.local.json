@@ -50,7 +50,10 @@
       "Bash(npx cap init:*)",
       "Bash(npx cap:*)",
       "Bash(cat:*)",
-      "Bash(keytool -genkeypair:*)"
+      "Bash(keytool -genkeypair:*)",
+      "Bash(git status:*)",
+      "Bash(xxd:*)",
+      "WebFetch(domain:ai-tarot-app.vercel.app)"
     ]
   }
 }
