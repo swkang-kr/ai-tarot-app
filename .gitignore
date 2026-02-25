@@ -26,6 +26,11 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# Android sensitive files
+android/app/google-services.json
+android/key.properties
+android/*.keystore
+
 # vercel
 .vercel
 
