@@ -8,7 +8,7 @@ export default function MainLayout({
 }) {
   return (
     <>
-      <div style={{ paddingBottom: 'calc(5rem + 50px + env(safe-area-inset-bottom, 0px))' }}>
+      <div style={{ paddingBottom: 'calc(5rem + var(--ad-banner-height, 0px) + env(safe-area-inset-bottom, 0px))' }}>
         {children}
       </div>
       <BottomNav />

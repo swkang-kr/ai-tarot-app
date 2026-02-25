@@ -10,6 +10,15 @@ const config: CapacitorConfig = {
     // url: 'http://localhost:3000',
     url: process.env.CAPACITOR_SERVER_URL || 'https://tarot.trendhunt.net',
     cleartext: false,
+    // OAuth 관련 도메인을 WebView 내부에서 처리 (외부 브라우저 차단)
+    allowNavigation: [
+      'tarot.trendhunt.net',
+      '*.supabase.co',
+      'accounts.google.com',
+      '*.google.com',
+      'kauth.kakao.com',
+      '*.kakao.com',
+    ],
   },
   plugins: {
     AdMob: {

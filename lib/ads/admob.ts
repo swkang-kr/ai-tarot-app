@@ -54,19 +54,24 @@ export async function initAdMob(): Promise<void> {
     // 배너 이벤트 리스너
     AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       console.log('[AdMob] 배너 로드 완료')
+      document.documentElement.style.setProperty('--ad-banner-height', '60px')
     })
 
     AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: AdMobError) => {
       console.warn('[AdMob] 배너 로드 실패:', error.message)
       bannerVisible = false
+      document.documentElement.style.setProperty('--ad-banner-height', '0px')
     })
 
     AdMob.addListener(BannerAdPluginEvents.Opened, () => {
       console.log('[AdMob] 배너 클릭됨')
     })
 
-    AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: unknown) => {
+    AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: any) => {
       console.log('[AdMob] 배너 크기 변경:', size)
+      if (size?.height) {
+        document.documentElement.style.setProperty('--ad-banner-height', `${size.height}px`)
+      }
     })
 
     // 전면 광고 이벤트 리스너
@@ -117,7 +122,7 @@ export async function showBanner(): Promise<void> {
       adId: getAdId('banner'),
       adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: BannerAdPosition.BOTTOM_CENTER,
-      margin: 60, // BottomNav 높이(5rem ≈ 80px) 위
+      margin: 0,
     })
     bannerVisible = true
   } catch (err) {
@@ -132,6 +137,7 @@ export async function hideBanner(): Promise<void> {
   try {
     await AdMob.hideBanner()
     bannerVisible = false
+    document.documentElement.style.setProperty('--ad-banner-height', '0px')
   } catch (err) {
     console.warn('[AdMob] 배너 숨기기 실패:', err)
   }
@@ -144,6 +150,7 @@ export async function removeBanner(): Promise<void> {
   try {
     await AdMob.removeBanner()
     bannerVisible = false
+    document.documentElement.style.setProperty('--ad-banner-height', '0px')
   } catch (err) {
     console.warn('[AdMob] 배너 제거 실패:', err)
   }
