@@ -23,6 +23,15 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* AdMob 배너가 있을 때 (네이티브 앱) */
+body.has-ad-banner .nav-bottom-bar {
+  bottom: 60px !important;
+}
+
+body.has-ad-banner .main-content-wrapper {
+  padding-bottom: calc(5rem + 60px + env(safe-area-inset-bottom, 0px));
+}
+
 /* react-datepicker custom theme */
 .datepicker-wrapper .react-datepicker-wrapper {
   width: 100%;

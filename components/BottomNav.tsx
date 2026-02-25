@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
-import { Capacitor } from '@capacitor/core'
 
 const tabs = [
   { href: '/', icon: '🔮', label: '오늘' },
@@ -50,10 +49,9 @@ export default function BottomNav() {
   )
 
   const totalItems = tabs.length + 1 // 탭 5개 + 로그아웃 1개
-  const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform()
 
   return (
-    <nav className="fixed left-0 right-0 z-50 bg-[#1a1744]/90 backdrop-blur-xl border-t border-white/10" style={{ bottom: isNative ? 60 : 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#1a1744]/90 backdrop-blur-xl border-t border-white/10 nav-bottom-bar" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="max-w-md mx-auto flex items-center justify-around h-16 relative">
         {/* 활성 탭 인디케이터 */}
         {activeIndex >= 0 && (
