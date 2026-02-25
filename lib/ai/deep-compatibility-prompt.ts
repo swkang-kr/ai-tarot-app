@@ -1,0 +1,145 @@
+import { anthropic } from '@/lib/ai/client'
+import type { SajuInfo } from '@/lib/utils/saju'
+
+export interface DeepCompatibilityResponse {
+  scores: {
+    overall: number
+    personality: number
+    communication: number
+    values: number
+    growth: number
+    physical: number     // 궁합 (신체적 끌림/에너지)
+    longterm: number     // 장기적 안정성
+  }
+  summary: string
+  personality: string
+  communication: string
+  values: string
+  advice: string
+  bestAspect: string
+  challengeAspect: string
+  // 심층 추가 필드
+  relationshipType: '연인' | '부부' | '친구' | '비즈니스'
+  fiveElementAnalysis: string   // 두 사람의 오행 조합 분석 (100-130자)
+  conflictPoints: string[]      // 갈등 포인트 3개
+  harmonyPoints: string[]       // 조화 포인트 3개
+  communicationTips: string     // 구체적 소통 방법 (80-100자)
+  fiveyearOutlook: string       // 5년 전망 (80-100자)
+  monthlyCompatibility: {
+    month: number
+    score: number
+    theme: string               // 이달의 궁합 테마 (15-20자)
+  }[]
+  keywords: string[]
+}
+
+const SYSTEM_PROMPT = `당신은 20년 경력의 사주팔자 궁합 전문가입니다. 두 사람의 사주를 심층 분석하여 궁합을 봐주세요.
+
+다음 JSON 형식으로만 응답하세요 (마크다운 코드 블록 없이):
+
+{
+  "scores": {
+    "overall": 78,
+    "personality": 82,
+    "communication": 75,
+    "values": 80,
+    "growth": 70,
+    "physical": 85,
+    "longterm": 72
+  },
+  "summary": "두 사람의 궁합 종합 요약 (80-120자)",
+  "personality": "성격 궁합 분석 (80-120자)",
+  "communication": "대화/소통 궁합 (80-120자)",
+  "values": "가치관 궁합 (80-120자)",
+  "advice": "관계 개선 조언 (80-120자)",
+  "bestAspect": "가장 큰 장점 (40-60자)",
+  "challengeAspect": "주의할 점 (40-60자)",
+  "relationshipType": "연인",
+  "fiveElementAnalysis": "두 일간의 오행 상생/상극 관계 상세 분석 (100-130자). 구체적 오행 관계 명시.",
+  "conflictPoints": [
+    "갈등 포인트 1 — 구체적 상황 묘사",
+    "갈등 포인트 2",
+    "갈등 포인트 3"
+  ],
+  "harmonyPoints": [
+    "조화 포인트 1 — 시너지 나는 부분",
+    "조화 포인트 2",
+    "조화 포인트 3"
+  ],
+  "communicationTips": "두 사람이 실천할 구체적 소통 방법 (80-100자)",
+  "fiveyearOutlook": "이 관계의 5년 후 전망 (80-100자). 현실적으로.",
+  "monthlyCompatibility": [
+    { "month": 1, "score": 72, "theme": "새로운 시작 에너지" },
+    { "month": 2, "score": 65, "theme": "감정 교류 집중" },
+    { "month": 3, "score": 80, "theme": "공동 목표 설정" },
+    { "month": 4, "score": 70, "theme": "갈등 조율 시기" },
+    { "month": 5, "score": 88, "theme": "최고의 교감 달" },
+    { "month": 6, "score": 62, "theme": "각자 시간 필요" },
+    { "month": 7, "score": 76, "theme": "여행·모험 운" },
+    { "month": 8, "score": 82, "theme": "신뢰 쌓이는 달" },
+    { "month": 9, "score": 60, "theme": "주의 필요 시기" },
+    { "month": 10, "score": 74, "theme": "성숙한 대화" },
+    { "month": 11, "score": 85, "theme": "감사와 화합" },
+    { "month": 12, "score": 78, "theme": "한 해 마무리" }
+  ],
+  "keywords": ["💕 이모지 키워드1", "✨ 키워드2", "🌊 키워드3"]
+}
+
+중요:
+- scores 7개 항목 0-100 정수
+- conflictPoints·harmonyPoints 정확히 3개
+- monthlyCompatibility 정확히 12개
+- 오행 상생/상극 원리에 기반한 과학적 분석
+- relationshipType은 요청된 관계 유형 반영`
+
+const RELATION_MAP: Record<string, '연인' | '부부' | '친구' | '비즈니스'> = {
+  lover: '연인',
+  spouse: '부부',
+  friend: '친구',
+  business: '비즈니스',
+  colleague: '비즈니스',
+}
+
+export async function generateDeepCompatibility(
+  person1Saju: SajuInfo,
+  person2Saju: SajuInfo,
+  relationshipType: string,
+  person1Birth: string,
+  person2Birth: string
+): Promise<DeepCompatibilityResponse> {
+  const relLabel = RELATION_MAP[relationshipType] ?? '연인'
+
+  const userPrompt = `두 사람의 ${relLabel} 궁합을 심층 분석해주세요.
+
+첫 번째 사람 (${person1Birth}생):
+- 년주: ${person1Saju.yearPillar} (${person1Saju.yearPillarHanja})
+- 월주: ${person1Saju.monthPillar} (${person1Saju.monthPillarHanja})
+- 일주: ${person1Saju.dayPillar} (${person1Saju.dayPillarHanja})${person1Saju.hourPillar ? `\n- 시주: ${person1Saju.hourPillar} (${person1Saju.hourPillarHanja})` : ''}
+
+두 번째 사람 (${person2Birth}생):
+- 년주: ${person2Saju.yearPillar} (${person2Saju.yearPillarHanja})
+- 월주: ${person2Saju.monthPillar} (${person2Saju.monthPillarHanja})
+- 일주: ${person2Saju.dayPillar} (${person2Saju.dayPillarHanja})${person2Saju.hourPillar ? `\n- 시주: ${person2Saju.hourPillar} (${person2Saju.hourPillarHanja})` : ''}
+
+두 일간(日干)의 오행 상생/상극 관계, 월지 충합, 연지 삼합·방합을 종합하여
+갈등 포인트·조화 포인트·5년 전망·12개월 궁합 흐름까지 심층 분석해주세요.`
+
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 3500,
+    system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: userPrompt }],
+  })
+
+  const content = message.content[0]
+  if (content.type !== 'text') throw new Error('Unexpected response type')
+
+  const jsonText = content.text.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '')
+
+  try {
+    return JSON.parse(jsonText) as DeepCompatibilityResponse
+  } catch {
+    console.error('[DeepCompatibility] JSON parse failed:', jsonText.slice(0, 300))
+    throw new Error('AI 응답 파싱 실패')
+  }
+}

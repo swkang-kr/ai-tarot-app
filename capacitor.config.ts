@@ -1,0 +1,23 @@
+import type { CapacitorConfig } from '@capacitor/cli'
+
+const config: CapacitorConfig = {
+  appId: 'com.aitarot.app',
+  appName: 'AI 타로',
+  webDir: 'out',
+  server: {
+    // 배포된 웹 URL (SSR 유지, Vercel 등)
+    // 로컬 개발 시 아래 줄 주석 해제:
+    // url: 'http://localhost:3000',
+    url: process.env.CAPACITOR_SERVER_URL || 'https://ai-tarot-app.vercel.app',
+    cleartext: false,
+  },
+  plugins: {
+    AdMob: {
+      // Google AdMob 콘솔에서 발급받은 App ID
+      Android: 'ca-app-pub-6554444153753287~7134935008',
+      iOS: 'ca-app-pub-6554444153753287~3495072893'
+    },
+  },
+}
+
+export default config

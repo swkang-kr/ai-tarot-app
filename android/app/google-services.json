@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "751338062443",
+    "project_id": "ai-tarot-app-bd47f",
+    "storage_bucket": "ai-tarot-app-bd47f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751338062443:android:38e3830dd2f4b99e1a672e",
+        "android_client_info": {
+          "package_name": "com.aitarot.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnf9wvttDDpgep304E2Az6ILiJmPvV6uE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
