@@ -18,7 +18,21 @@ function dispatchBannerHeight(height: number): void {
 // ─────────────────────────────────────────────
 // Ad Unit IDs
 // ─────────────────────────────────────────────
-const AD_IDS = {
+const IS_TEST = process.env.NEXT_PUBLIC_ADMOB_TEST === 'true'
+
+// 구글 공식 테스트 광고 ID (항상 광고가 채워짐)
+const TEST_AD_IDS = {
+  banner: {
+    android: 'ca-app-pub-3940256099942544/6300978111',
+    ios: 'ca-app-pub-3940256099942544/2934735716',
+  },
+  interstitial: {
+    android: 'ca-app-pub-3940256099942544/1033173712',
+    ios: 'ca-app-pub-3940256099942544/4411468910',
+  },
+}
+
+const PROD_AD_IDS = {
   banner: {
     android: 'ca-app-pub-6554444153753287/7938403293',
     ios: 'ca-app-pub-6554444153753287/4849205523',
@@ -28,6 +42,8 @@ const AD_IDS = {
     ios: 'ca-app-pub-6554444153753287/8596878843',
   },
 }
+
+const AD_IDS = IS_TEST ? TEST_AD_IDS : PROD_AD_IDS
 
 function getAdId(type: 'banner' | 'interstitial'): string {
   const platform = Capacitor.getPlatform()
@@ -53,7 +69,7 @@ export async function initAdMob(): Promise<void> {
 
   try {
     await AdMob.initialize({
-      initializeForTesting: false,
+      initializeForTesting: IS_TEST,
     })
     initialized = true
     console.log('[AdMob] 초기화 완료')
