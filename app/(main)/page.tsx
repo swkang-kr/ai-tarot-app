@@ -49,6 +49,11 @@ export default function HomePage() {
       sessionStorage.removeItem(BIRTH_DATE_KEY)
     }
     loadHistory()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      loadHistory()
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   const loadHistory = async () => {
@@ -58,6 +63,7 @@ export default function HomePage() {
 
     if (!user) {
       setIsLoggedIn(false)
+      setHistory([])
       return
     }
 
