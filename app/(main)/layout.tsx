@@ -1,5 +1,6 @@
 import BottomNav from '@/components/BottomNav'
 import AdBanner from '@/components/AdBanner'
+import MainContent from '@/components/MainContent'
 
 export default function MainLayout({
   children,
@@ -8,9 +9,9 @@ export default function MainLayout({
 }) {
   return (
     <>
-      <div className="main-content-wrapper">
+      <MainContent>
         {children}
-      </div>
+      </MainContent>
       <BottomNav />
       <AdBanner />
     </>
