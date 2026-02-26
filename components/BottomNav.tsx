@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
-import { subscribeBannerHeight } from '@/lib/ads/bannerState'
 
 const tabs = [
   { href: '/', icon: '🔮', label: '오늘' },
@@ -32,12 +31,15 @@ export default function BottomNav() {
       setIsLoggedIn(!!session?.user)
     })
 
-    // AdMob 배너 높이 구독
-    const unsubscribe = subscribeBannerHeight(setAdBannerHeight)
+    // AdMob 배너 높이 수신 (admob.ts에서 dispatchEvent로 전달)
+    const handleBannerHeight = (e: Event) => {
+      setAdBannerHeight((e as CustomEvent<number>).detail)
+    }
+    window.addEventListener('adBannerHeight', handleBannerHeight)
 
     return () => {
       subscription.unsubscribe()
-      unsubscribe()
+      window.removeEventListener('adBannerHeight', handleBannerHeight)
     }
   }, [])
 

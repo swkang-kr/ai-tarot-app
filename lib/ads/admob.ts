@@ -8,7 +8,12 @@ import {
   AdLoadInfo,
   AdMobError,
 } from '@capacitor-community/admob'
-import { setBannerHeight } from './bannerState'
+
+function dispatchBannerHeight(height: number): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('adBannerHeight', { detail: height }))
+  }
+}
 
 // ─────────────────────────────────────────────
 // Ad Unit IDs
@@ -56,13 +61,13 @@ export async function initAdMob(): Promise<void> {
     // 배너 이벤트 리스너
     AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       console.log('[AdMob] 배너 로드 완료')
-      setBannerHeight(60) // 초기값, SizeChanged에서 실제값으로 업데이트
+      dispatchBannerHeight(60) // 초기값, SizeChanged에서 실제값으로 업데이트
     })
 
     AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: AdMobError) => {
       console.warn('[AdMob] 배너 로드 실패:', error.message)
       bannerVisible = false
-      setBannerHeight(0)
+      dispatchBannerHeight(0)
     })
 
     AdMob.addListener(BannerAdPluginEvents.Opened, () => {
@@ -72,7 +77,7 @@ export async function initAdMob(): Promise<void> {
     AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: any) => {
       console.log('[AdMob] 배너 크기 변경:', size)
       if (size?.height) {
-        setBannerHeight(Math.ceil(size.height))
+        dispatchBannerHeight(Math.ceil(size.height))
       }
     })
 
@@ -139,7 +144,7 @@ export async function hideBanner(): Promise<void> {
   try {
     await AdMob.hideBanner()
     bannerVisible = false
-    setBannerHeight(0)
+    dispatchBannerHeight(0)
   } catch (err) {
     console.warn('[AdMob] 배너 숨기기 실패:', err)
   }
@@ -152,7 +157,7 @@ export async function removeBanner(): Promise<void> {
   try {
     await AdMob.removeBanner()
     bannerVisible = false
-    setBannerHeight(0)
+    dispatchBannerHeight(0)
   } catch (err) {
     console.warn('[AdMob] 배너 제거 실패:', err)
   }
