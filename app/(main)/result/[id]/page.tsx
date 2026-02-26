@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import TarotCard from '@/components/TarotCard'
 import SajuCard from '@/components/SajuCard'
-import ShareButtons from '@/components/ShareButtons'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import { getSajuInfo, type SajuInfo } from '@/lib/utils/saju'
 import { motion } from 'framer-motion'
@@ -145,15 +144,6 @@ export default function ResultPage() {
             <SajuCard saju={saju} analysis={reading.saju_analysis} />
           </motion.div>
         )}
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: saju ? 0.5 : 0.3 }}
-          className="mt-6"
-        >
-          <ShareButtons reading={reading} />
-        </motion.div>
 
         <motion.div
           initial={{ opacity: 0 }}
