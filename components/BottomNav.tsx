@@ -31,14 +31,14 @@ export default function BottomNav() {
       setIsLoggedIn(!!session?.user)
     })
 
-    // AdMob 배너 높이 감지
-    if (document.body.classList.contains('has-ad-banner')) {
-      setAdBannerHeight(60)
+    // AdMob 배너 높이 동적 감지 (data-ad-banner-height 속성)
+    const readHeight = () => {
+      const h = parseInt(document.body.dataset.adBannerHeight || '0', 10)
+      setAdBannerHeight(h)
     }
-    const observer = new MutationObserver(() => {
-      setAdBannerHeight(document.body.classList.contains('has-ad-banner') ? 60 : 0)
-    })
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+    readHeight()
+    const observer = new MutationObserver(readHeight)
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-ad-banner-height'] })
 
     return () => {
       subscription.unsubscribe()

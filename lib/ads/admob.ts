@@ -36,6 +36,16 @@ let initialized = false
 let bannerVisible = false
 let interstitialLoaded = false
 
+/** body에 배너 높이를 data 속성으로 전달 (BottomNav가 읽음) */
+function setAdBannerHeight(height: number) {
+  document.body.dataset.adBannerHeight = String(height)
+  if (height > 0) {
+    document.body.classList.add('has-ad-banner')
+  } else {
+    document.body.classList.remove('has-ad-banner')
+  }
+}
+
 // ─────────────────────────────────────────────
 // 초기화
 // ─────────────────────────────────────────────
@@ -54,13 +64,13 @@ export async function initAdMob(): Promise<void> {
     // 배너 이벤트 리스너
     AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       console.log('[AdMob] 배너 로드 완료')
-      document.documentElement.style.setProperty('--ad-banner-height', '60px')
+      setAdBannerHeight(60) // 초기값, SizeChanged에서 실제값으로 업데이트
     })
 
     AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: AdMobError) => {
       console.warn('[AdMob] 배너 로드 실패:', error.message)
       bannerVisible = false
-      document.documentElement.style.setProperty('--ad-banner-height', '0px')
+      setAdBannerHeight(0)
     })
 
     AdMob.addListener(BannerAdPluginEvents.Opened, () => {
@@ -70,7 +80,7 @@ export async function initAdMob(): Promise<void> {
     AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: any) => {
       console.log('[AdMob] 배너 크기 변경:', size)
       if (size?.height) {
-        document.documentElement.style.setProperty('--ad-banner-height', `${size.height}px`)
+        setAdBannerHeight(Math.ceil(size.height))
       }
     })
 
@@ -137,7 +147,7 @@ export async function hideBanner(): Promise<void> {
   try {
     await AdMob.hideBanner()
     bannerVisible = false
-    document.documentElement.style.setProperty('--ad-banner-height', '0px')
+    setAdBannerHeight(0)
   } catch (err) {
     console.warn('[AdMob] 배너 숨기기 실패:', err)
   }
@@ -150,7 +160,7 @@ export async function removeBanner(): Promise<void> {
   try {
     await AdMob.removeBanner()
     bannerVisible = false
-    document.documentElement.style.setProperty('--ad-banner-height', '0px')
+    setAdBannerHeight(0)
   } catch (err) {
     console.warn('[AdMob] 배너 제거 실패:', err)
   }
