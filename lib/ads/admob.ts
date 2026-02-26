@@ -77,7 +77,7 @@ export async function initAdMob(): Promise<void> {
     // 배너 이벤트 리스너
     AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       console.log('[AdMob] 배너 로드 완료')
-      dispatchBannerHeight(60) // 초기값, SizeChanged에서 실제값으로 업데이트
+      // SizeChanged가 먼저 실제 높이를 전달하므로 여기서 덮어쓰지 않음
     })
 
     AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: AdMobError) => {
