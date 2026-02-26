@@ -6,7 +6,6 @@ import CompatibilityCard from '@/components/CompatibilityCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { CompatibilityResponse } from '@/lib/ai/compatibility-prompt'
-import { showInterstitial } from '@/lib/ads/admob'
 
 const RELATIONSHIP_TYPES = [
   { value: 'lover', label: '💕 연인', desc: '사랑과 로맨스' },
@@ -33,7 +32,6 @@ export default function CompatibilityPage() {
     setError(null)
     setLoading(true)
 
-    await showInterstitial()
 
     try {
       const response = await fetch('/api/compatibility', {

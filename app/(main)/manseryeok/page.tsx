@@ -8,7 +8,6 @@ import SajuCard from '@/components/SajuCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import type { ManseryeokResponse } from '@/lib/ai/manseryeok-prompt'
 import { getSajuInfo } from '@/lib/utils/saju'
-import { showInterstitial } from '@/lib/ads/admob'
 
 export default function ManseryeokPage() {
   const [birthDate, setBirthDate] = useState<Date | null>(null)
@@ -28,7 +27,6 @@ export default function ManseryeokPage() {
     setError(null)
     setStep('loading')
 
-    await showInterstitial()
 
     const dateStr = birthDate.toISOString().split('T')[0]
 

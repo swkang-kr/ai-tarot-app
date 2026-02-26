@@ -6,7 +6,6 @@ import DatePicker from '@/components/DatePicker'
 import LuckyCard from '@/components/LuckyCard'
 import { getSajuInfo } from '@/lib/utils/saju'
 import { calculateLucky, type LuckyInfo } from '@/lib/utils/lucky'
-import { showInterstitial } from '@/lib/ads/admob'
 
 export default function LuckyPage() {
   const [birthDate, setBirthDate] = useState<Date | null>(null)
@@ -19,7 +18,6 @@ export default function LuckyPage() {
     if (!birthDate) return
     try {
       setError(null)
-      await showInterstitial()
       const dateStr = `${birthDate.getFullYear()}-${String(birthDate.getMonth() + 1).padStart(2, '0')}-${String(birthDate.getDate()).padStart(2, '0')}`
       const saju = getSajuInfo(dateStr, birthHour ?? undefined)
       const lucky = calculateLucky(saju, new Date())

@@ -8,7 +8,6 @@ import { ko } from 'date-fns/locale'
 import HistoryAnalysisCard from '@/components/HistoryAnalysisCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import type { HistoryAnalysisResponse } from '@/lib/ai/history-prompt'
-import { showInterstitial } from '@/lib/ads/admob'
 
 interface ReadingRow {
   id: string
@@ -58,7 +57,6 @@ export default function HistoryPage() {
     setLoadingAnalysis(true)
     setError(null)
 
-    await showInterstitial()
 
     try {
       const res = await fetch('/api/history/analyze')

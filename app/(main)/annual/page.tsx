@@ -6,7 +6,6 @@ import DatePicker from '@/components/DatePicker'
 import AnnualCard from '@/components/AnnualCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import type { AnnualResponse } from '@/lib/ai/annual-prompt'
-import { showInterstitial } from '@/lib/ads/admob'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const YEAR_OPTIONS = [CURRENT_YEAR, CURRENT_YEAR + 1]
@@ -30,7 +29,6 @@ export default function AnnualPage() {
     setError(null)
     setStep('loading')
 
-    await showInterstitial()
 
     try {
       const res = await fetch('/api/annual', {

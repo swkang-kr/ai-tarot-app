@@ -9,7 +9,6 @@ import SajuCard from '@/components/SajuCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import type { NewYearResponse } from '@/lib/ai/new-year-prompt'
 import { getSajuInfo } from '@/lib/utils/saju'
-import { showInterstitial } from '@/lib/ads/admob'
 
 export default function NewYearPage() {
   return (
@@ -40,7 +39,6 @@ function NewYearContent() {
     setError(null)
     setStep('loading')
 
-    await showInterstitial()
 
     const dateStr = birthDate.toISOString().split('T')[0]
     try {

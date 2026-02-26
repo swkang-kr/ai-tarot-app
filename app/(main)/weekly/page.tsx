@@ -6,7 +6,6 @@ import WeeklyCard from '@/components/WeeklyCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { WeeklyResponse } from '@/lib/ai/weekly-prompt'
-import { showInterstitial } from '@/lib/ads/admob'
 
 const BIRTH_DATE_KEY = 'ai-tarot-birthDate-weekly'
 
@@ -33,7 +32,6 @@ export default function WeeklyPage() {
     setError(null)
     setLoading(true)
 
-    await showInterstitial()
 
     try {
       // Save birth date for convenience

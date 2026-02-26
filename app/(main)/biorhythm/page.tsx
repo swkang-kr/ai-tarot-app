@@ -11,7 +11,6 @@ import {
   calculateBiorhythmChart,
   getBiorhythmStatus,
 } from '@/lib/utils/biorhythm'
-import { showInterstitial } from '@/lib/ads/admob'
 
 export default function BiorhythmPage() {
   const [birthDate, setBirthDate] = useState<Date | null>(null)
@@ -34,7 +33,6 @@ export default function BiorhythmPage() {
 
   const handleSubmit = async () => {
     if (!birthDate) return
-    await showInterstitial()
     const today = new Date()
     const scores = calculateBiorhythmToday(birthDate, today)
     const chart = calculateBiorhythmChart(birthDate, today)

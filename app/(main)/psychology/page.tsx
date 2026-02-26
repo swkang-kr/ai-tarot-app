@@ -6,7 +6,6 @@ import DatePicker from '@/components/DatePicker'
 import PsychologyCard from '@/components/PsychologyCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import type { PsychologyResponse } from '@/lib/ai/psychology-prompt'
-import { showInterstitial } from '@/lib/ads/admob'
 
 export default function PsychologyPage() {
   const [birthDate, setBirthDate] = useState<Date | null>(null)
@@ -36,7 +35,6 @@ export default function PsychologyPage() {
     setError(null)
     setStep('loading')
 
-    await showInterstitial()
 
     try {
       const res = await fetch('/api/psychology', {

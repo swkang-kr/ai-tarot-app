@@ -4,8 +4,6 @@ import {
   BannerAdSize,
   BannerAdPosition,
   BannerAdPluginEvents,
-  InterstitialAdPluginEvents,
-  AdLoadInfo,
   AdMobError,
 } from '@capacitor-community/admob'
 
@@ -21,34 +19,20 @@ function dispatchBannerHeight(height: number): void {
 const IS_TEST = process.env.NEXT_PUBLIC_ADMOB_TEST === 'true'
 
 // 구글 공식 테스트 광고 ID (항상 광고가 채워짐)
-const TEST_AD_IDS = {
-  banner: {
-    android: 'ca-app-pub-3940256099942544/6300978111',
-    ios: 'ca-app-pub-3940256099942544/2934735716',
-  },
-  interstitial: {
-    android: 'ca-app-pub-3940256099942544/1033173712',
-    ios: 'ca-app-pub-3940256099942544/4411468910',
-  },
+const TEST_BANNER_ID = {
+  android: 'ca-app-pub-3940256099942544/6300978111',
+  ios: 'ca-app-pub-3940256099942544/2934735716',
 }
 
-const PROD_AD_IDS = {
-  banner: {
-    android: 'ca-app-pub-6554444153753287/7938403293',
-    ios: 'ca-app-pub-6554444153753287/4849205523',
-  },
-  interstitial: {
-    android: 'ca-app-pub-6554444153753287/4811519417',
-    ios: 'ca-app-pub-6554444153753287/8596878843',
-  },
+const PROD_BANNER_ID = {
+  android: 'ca-app-pub-6554444153753287/7938403293',
+  ios: 'ca-app-pub-6554444153753287/4849205523',
 }
 
-const AD_IDS = IS_TEST ? TEST_AD_IDS : PROD_AD_IDS
+const BANNER_ID = IS_TEST ? TEST_BANNER_ID : PROD_BANNER_ID
 
-function getAdId(type: 'banner' | 'interstitial'): string {
-  const platform = Capacitor.getPlatform()
-  if (platform === 'ios') return AD_IDS[type].ios
-  return AD_IDS[type].android
+function getBannerId(): string {
+  return Capacitor.getPlatform() === 'ios' ? BANNER_ID.ios : BANNER_ID.android
 }
 
 // ─────────────────────────────────────────────
@@ -56,8 +40,6 @@ function getAdId(type: 'banner' | 'interstitial'): string {
 // ─────────────────────────────────────────────
 let initialized = false
 let bannerVisible = false
-let interstitialLoaded = false
-
 
 // ─────────────────────────────────────────────
 // 초기화
@@ -74,7 +56,6 @@ export async function initAdMob(): Promise<void> {
     initialized = true
     console.log('[AdMob] 초기화 완료')
 
-    // 배너 이벤트 리스너
     AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       console.log('[AdMob] 배너 로드 완료')
       // SizeChanged가 먼저 실제 높이를 전달하므로 여기서 덮어쓰지 않음
@@ -96,36 +77,6 @@ export async function initAdMob(): Promise<void> {
         dispatchBannerHeight(Math.ceil(size.height))
       }
     })
-
-    // 전면 광고 이벤트 리스너
-    AdMob.addListener(InterstitialAdPluginEvents.Loaded, (info: AdLoadInfo) => {
-      console.log('[AdMob] 전면 광고 로드 완료:', info.adUnitId)
-      interstitialLoaded = true
-    })
-
-    AdMob.addListener(InterstitialAdPluginEvents.FailedToLoad, (error: AdMobError) => {
-      console.warn('[AdMob] 전면 광고 로드 실패:', error.message)
-      interstitialLoaded = false
-    })
-
-    AdMob.addListener(InterstitialAdPluginEvents.Showed, () => {
-      console.log('[AdMob] 전면 광고 표시됨')
-    })
-
-    AdMob.addListener(InterstitialAdPluginEvents.Dismissed, () => {
-      console.log('[AdMob] 전면 광고 닫힘')
-      interstitialLoaded = false
-      // 다음 전면 광고 미리 로드
-      preloadInterstitial()
-    })
-
-    AdMob.addListener(InterstitialAdPluginEvents.FailedToShow, (error: AdMobError) => {
-      console.warn('[AdMob] 전면 광고 표시 실패:', error.message)
-      interstitialLoaded = false
-    })
-
-    // 전면 광고 미리 로드
-    preloadInterstitial()
   } catch (err) {
     console.warn('[AdMob] 초기화 실패:', err)
   }
@@ -142,7 +93,7 @@ export async function showBanner(): Promise<void> {
 
   try {
     await AdMob.showBanner({
-      adId: getAdId('banner'),
+      adId: getBannerId(),
       adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: BannerAdPosition.BOTTOM_CENTER,
       margin: 0,
@@ -176,59 +127,6 @@ export async function removeBanner(): Promise<void> {
     dispatchBannerHeight(0)
   } catch (err) {
     console.warn('[AdMob] 배너 제거 실패:', err)
-  }
-}
-
-// ─────────────────────────────────────────────
-// 전면 광고 (Interstitial)
-// ─────────────────────────────────────────────
-
-/** 전면 광고 미리 로드 (백그라운드) */
-async function preloadInterstitial(): Promise<void> {
-  if (!initialized || interstitialLoaded) return
-
-  try {
-    await AdMob.prepareInterstitial({
-      adId: getAdId('interstitial'),
-    })
-  } catch (err) {
-    console.warn('[AdMob] 전면 광고 프리로드 실패:', err)
-  }
-}
-
-/**
- * 전면 광고 표시 (콘텐츠 확인 전 호출)
- *
- * - 광고가 미리 로드되어 있으면 즉시 표시
- * - 로드 안 되어 있으면 로드 후 표시 시도
- * - 실패해도 true 반환 (콘텐츠 접근 차단하지 않음)
- *
- * @example
- * ```ts
- * const handleSubmit = async () => {
- *   setStep('loading')
- *   await showInterstitial()  // 전면 광고 → 닫은 후 계속 진행
- *   const res = await fetch('/api/generate', { ... })
- * }
- * ```
- */
-export async function showInterstitial(): Promise<boolean> {
-  if (!Capacitor.isNativePlatform()) return true
-
-  try {
-    // 미리 로드되지 않았으면 지금 로드
-    if (!interstitialLoaded) {
-      await AdMob.prepareInterstitial({
-        adId: getAdId('interstitial'),
-      })
-    }
-
-    await AdMob.showInterstitial()
-    interstitialLoaded = false
-    return true
-  } catch (err) {
-    console.warn('[AdMob] 전면 광고 실패:', err)
-    return true // 광고 실패 시에도 콘텐츠 허용
   }
 }
 

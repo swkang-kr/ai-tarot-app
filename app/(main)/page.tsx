@@ -15,7 +15,6 @@ import { ko } from 'date-fns/locale'
 import type { TarotCard as TarotCardType } from '@/lib/data/tarot-cards'
 import { calculateDailyJinjin } from '@/lib/utils/daily-jinjin'
 import { getSajuInfo, type SajuInfo } from '@/lib/utils/saju'
-import { showInterstitial } from '@/lib/ads/admob'
 
 const BIRTH_DATE_KEY = 'ai-tarot-birthDate'
 
@@ -97,7 +96,6 @@ export default function HomePage() {
       setStep('loading')
       setError(null)
 
-      await showInterstitial()
 
       try {
         const response = await fetch('/api/generate', {

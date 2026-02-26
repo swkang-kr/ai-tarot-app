@@ -5,7 +5,6 @@ import DreamCard from '@/components/DreamCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { DreamResponse } from '@/lib/ai/dream-prompt'
-import { showInterstitial } from '@/lib/ads/admob'
 
 const DREAM_CATEGORIES = [
   { value: '사람', label: '👤 사람' },
@@ -30,7 +29,6 @@ export default function DreamPage() {
     setError(null)
     setLoading(true)
 
-    await showInterstitial()
 
     try {
       const response = await fetch('/api/dream', {

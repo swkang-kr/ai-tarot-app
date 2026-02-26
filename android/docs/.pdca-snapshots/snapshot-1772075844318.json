@@ -1,0 +1,311 @@
+{
+  "timestamp": "2026-02-26T03:17:24.317Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-02-26T03:17:13.411Z",
+    "activeFeatures": [
+      "ads",
+      "ai-tarot-app",
+      "(main)",
+      "aitarot",
+      "login"
+    ],
+    "primaryFeature": "ads",
+    "features": {
+      "ads": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-25T14:16:38.439Z",
+          "lastUpdated": "2026-02-26T03:17:13.411Z"
+        },
+        "lastFile": "C:/workspace/Claude/ai-tarot-app/lib/ads/admob.ts"
+      },
+      "ai-tarot-app": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-25T14:17:15.028Z",
+          "lastUpdated": "2026-02-26T01:59:57.653Z"
+        },
+        "lastFile": "C:/workspace/Claude/ai-tarot-app/components/AdBanner.tsx"
+      },
+      "(main)": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-25T14:19:31.544Z",
+          "lastUpdated": "2026-02-25T15:02:21.656Z"
+        },
+        "lastFile": "C:/workspace/Claude/ai-tarot-app/app/(main)/layout.tsx"
+      },
+      "aitarot": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-25T14:26:38.219Z",
+          "lastUpdated": "2026-02-25T15:13:00.505Z"
+        },
+        "lastFile": "C:/workspace/Claude/ai-tarot-app/android/app/src/main/java/com/aitarot/app/OAuthActivity.java"
+      },
+      "login": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-25T15:12:38.678Z",
+          "lastUpdated": "2026-02-25T15:12:38.678Z"
+        },
+        "lastFile": "C:/workspace/Claude/ai-tarot-app/app/(auth)/login/page.tsx"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-02-25T12:55:48.399Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-02-26T03:17:13.411Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-02-25T14:16:38.439Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:17:15.028Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:18:22.250Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:18:41.050Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:18:57.669Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:19:13.161Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:19:31.544Z",
+        "feature": "(main)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:26:38.219Z",
+        "feature": "aitarot",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:40:34.050Z",
+        "feature": "aitarot",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:41:03.836Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:41:20.441Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:41:39.349Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T14:42:09.338Z",
+        "feature": "(main)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:02:21.656Z",
+        "feature": "(main)",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:02:41.282Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:02:55.026Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:03:12.139Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:03:29.330Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:12:38.678Z",
+        "feature": "login",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:13:00.505Z",
+        "feature": "aitarot",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:22:31.847Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-25T15:22:44.317Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T00:37:57.105Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T00:38:13.374Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T00:38:27.490Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T00:38:37.905Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T00:38:51.154Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T00:39:02.946Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T01:58:27.702Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T01:58:50.636Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T01:59:06.978Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T01:59:22.398Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T01:59:32.870Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T01:59:46.076Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T01:59:57.653Z",
+        "feature": "ai-tarot-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-26T03:17:13.411Z",
+        "feature": "ads",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}

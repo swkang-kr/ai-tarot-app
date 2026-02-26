@@ -6,7 +6,6 @@ import DatePicker from '@/components/DatePicker'
 import DeepCompatibilityCard from '@/components/DeepCompatibilityCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import type { DeepCompatibilityResponse } from '@/lib/ai/deep-compatibility-prompt'
-import { showInterstitial } from '@/lib/ads/admob'
 
 const RELATIONSHIP_TYPES = [
   { value: 'lover', label: '💕 연인', desc: '사랑과 로맨스' },
@@ -50,7 +49,6 @@ export default function DeepCompatibilityPage() {
     setError(null)
     setStep('loading')
 
-    await showInterstitial()
 
     try {
       const res = await fetch('/api/compatibility-deep', {
