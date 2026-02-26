@@ -23,11 +23,12 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* AdMob 배너가 있을 때 (네이티브 앱) */
-body.has-ad-banner .nav-bottom-bar {
-  bottom: 60px !important;
+/* 기본 콘텐츠 하단 패딩 (BottomNav 높이) */
+.main-content-wrapper {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* AdMob 배너가 있을 때 (네이티브 앱) - 배너 높이 추가 */
 body.has-ad-banner .main-content-wrapper {
   padding-bottom: calc(5rem + 60px + env(safe-area-inset-bottom, 0px));
 }
