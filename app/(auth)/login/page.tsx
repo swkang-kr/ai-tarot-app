@@ -1,8 +1,8 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Capacitor } from '@capacitor/core'
 import { Browser } from '@capacitor/browser'
@@ -19,6 +19,16 @@ function LoginContent() {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const errorMsg = searchParams.get('error')
+  const router = useRouter()
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        router.replace('/')
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   const handleOAuthLogin = async (provider: 'google' | 'kakao') => {
     const isNative = Capacitor.isNativePlatform()
