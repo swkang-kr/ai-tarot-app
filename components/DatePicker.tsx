@@ -3,7 +3,7 @@
 import ReactDatePicker from 'react-datepicker'
 import { ko } from 'date-fns/locale'
 import { parse, isValid } from 'date-fns'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import 'react-datepicker/dist/react-datepicker.css'
 
 interface DatePickerProps {
@@ -20,6 +20,7 @@ export default function DatePicker({
   className = ''
 }: DatePickerProps) {
   const [inputValue, setInputValue] = useState('')
+  const pickerRef = useRef<ReactDatePicker>(null)
 
   const handleRawChange = (event?: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>) => {
     const target = (event?.target as HTMLInputElement) ?? null
@@ -35,6 +36,7 @@ export default function DatePicker({
       const parsed = parse(digits, 'yyyyMMdd', new Date())
       if (isValid(parsed) && parsed <= maxDate) {
         onChange(parsed)
+        pickerRef.current?.setOpen(false)  // 달력 모달 닫기
       }
     }
   }
@@ -42,6 +44,7 @@ export default function DatePicker({
   return (
     <div className={`datepicker-wrapper ${className}`}>
       <ReactDatePicker
+        ref={pickerRef}
         selected={selected}
         onChange={(date: Date | null) => {
           if (date) {
