@@ -113,9 +113,9 @@ export default function HistoryPage() {
       <div className="max-w-md mx-auto space-y-6">
         {/* 헤더 */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <a href="/premium" className="inline-flex items-center gap-1 text-purple-300 hover:text-white text-sm mb-3 transition-colors">
+          <button onClick={() => window.location.href = '/premium'} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm mb-4 transition-colors">
             ← 프리미엄
-          </a>
+          </button>
           <h1 className="text-2xl font-bold text-white mb-1">📊 운세 히스토리</h1>
           <p className="text-purple-300 text-sm">
             전체 기록 · AI 트렌드 분석
