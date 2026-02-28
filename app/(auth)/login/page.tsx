@@ -30,6 +30,28 @@ function LoginContent() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // 네이티브 앱 전용: MainActivity에서 dispatch한 OAuth 콜백 이벤트 처리
+  // loadUrl(페이지 이동) 대신 JS에서 직접 code 교환 → 즉시 SIGNED_IN 발생
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+
+    const handleNativeOAuth = async (e: Event) => {
+      const oauthUrl = (e as CustomEvent<string>).detail
+      try {
+        const url = new URL(oauthUrl)
+        const code = url.searchParams.get('code')
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code)
+        }
+      } catch (err) {
+        console.error('[OAuth] code exchange 실패:', err)
+      }
+    }
+
+    window.addEventListener('nativeOAuthCallback', handleNativeOAuth)
+    return () => window.removeEventListener('nativeOAuthCallback', handleNativeOAuth)
+  }, [])
+
   const handleOAuthLogin = async (provider: 'google' | 'kakao') => {
     const isNative = Capacitor.isNativePlatform()
 
