@@ -173,9 +173,9 @@ export default function HomePage() {
                 >
                   🔮
                 </motion.div>
-                <h1 className="text-3xl font-bold text-white mb-2">AI 타로</h1>
+                <h1 className="text-3xl font-bold text-white mb-2">별빛 운세</h1>
                 <p className="text-purple-200">
-                  당신의 오늘을 AI가 읽어드립니다
+                  별빛이 전하는 오늘의 운세
                 </p>
               </div>
 

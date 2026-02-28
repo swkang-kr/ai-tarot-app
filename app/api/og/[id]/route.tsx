@@ -14,7 +14,7 @@ export async function GET(
     .single()
 
   const keywords: string[] = reading?.keywords ?? ['운세', '타로']
-  const overall: string = reading?.overall ?? '오늘의 AI 타로 운세를 확인해보세요'
+  const overall: string = reading?.overall ?? '오늘의 별빛 운세를 확인해보세요'
   const luckyColor: string = reading?.lucky_color ?? '#8b5cf6'
   const luckyNumber: number = reading?.lucky_number ?? 7
   const snippet = overall.length > 70 ? overall.slice(0, 68) + '…' : overall
@@ -52,7 +52,7 @@ export async function GET(
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px' }}>
           <span style={{ fontSize: '48px' }}>🔮</span>
           <span style={{ fontSize: '36px', fontWeight: 700, color: 'white', letterSpacing: '-1px' }}>
-            AI 타로
+            별빛 운세
           </span>
         </div>
 

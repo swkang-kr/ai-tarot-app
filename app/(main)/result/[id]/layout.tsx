@@ -16,11 +16,11 @@ export async function generateMetadata({
     .single()
 
   const title = reading?.keywords?.length
-    ? `🔮 ${reading.keywords.slice(0, 2).join(' ')} - AI 타로 운세`
-    : 'AI 타로 운세 결과'
+    ? `🔮 ${reading.keywords.slice(0, 2).join(' ')} - 별빛 운세`
+    : '별빛 운세 결과'
   const description = reading?.overall
     ? reading.overall.slice(0, 80)
-    : 'AI가 읽어주는 오늘의 타로 운세'
+    : '별빛이 전하는 오늘의 타로 운세'
 
   const ogImageUrl = `${APP_URL}/api/og/${params.id}`
 

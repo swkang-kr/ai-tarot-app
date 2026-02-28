@@ -89,7 +89,7 @@ function LoginContent() {
       >
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🔮</div>
-          <h1 className="text-3xl font-bold text-white mb-2">AI 타로</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">별빛 운세</h1>
           <p className="text-purple-200">로그인하고 오늘의 운세를 확인하세요</p>
         </div>
 
