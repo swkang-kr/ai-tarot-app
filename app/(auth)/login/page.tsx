@@ -19,16 +19,17 @@ function LoginContent() {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const errorMsg = searchParams.get('error')
+  const redirectTo = searchParams.get('redirect') || '/'
   const router = useRouter()
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') {
-        router.replace('/')
+        router.replace(redirectTo)
       }
     })
     return () => subscription.unsubscribe()
-  }, [])
+  }, [redirectTo])
 
   // 네이티브 앱 전용: MainActivity에서 dispatch한 OAuth 콜백 이벤트 처리
   // loadUrl(페이지 이동) 대신 JS에서 직접 code 교환 → 즉시 SIGNED_IN 발생
@@ -60,7 +61,7 @@ function LoginContent() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: 'com.aitarot.app://auth/callback',
+          redirectTo: 'com.byeolbit.unse://auth/callback',
           skipBrowserRedirect: true,
           ...(provider === 'kakao' && { scopes: 'profile_nickname profile_image' })
         }

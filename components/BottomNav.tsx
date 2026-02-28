@@ -110,7 +110,7 @@ export default function BottomNav() {
           </button>
         ) : (
           <Link
-            href="/login"
+            href={`/login?redirect=${encodeURIComponent(pathname)}`}
             className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-white/40 hover:text-white/60 transition-colors"
           >
             <span className="text-xl">🔑</span>

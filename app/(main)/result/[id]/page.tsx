@@ -105,7 +105,7 @@ export default function ResultPage() {
             </p>
             <div className="flex gap-3 justify-center">
               <a
-                href="/login"
+                href="/login?redirect=/"
                 className="px-6 py-3 bg-purple-500 text-white rounded-xl font-medium hover:bg-purple-400 transition"
               >
                 로그인하기

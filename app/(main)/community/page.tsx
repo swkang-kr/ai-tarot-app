@@ -267,7 +267,7 @@ export default function CommunityPage() {
                     취소
                   </button>
                   <a
-                    href="/login"
+                    href="/login?redirect=/community"
                     className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold text-center"
                   >
                     로그인하기

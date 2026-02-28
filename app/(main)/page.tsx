@@ -288,7 +288,7 @@ export default function HomePage() {
                   로그인하면 운세 기록이 저장됩니다
                 </p>
                 <a
-                  href="/login"
+                  href="/login?redirect=/"
                   className="inline-block px-6 py-2 bg-purple-500 text-white rounded-xl text-sm font-medium hover:bg-purple-400 transition"
                 >
                   로그인하기

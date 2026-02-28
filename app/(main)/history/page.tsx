@@ -92,7 +92,7 @@ export default function HistoryPage() {
               로그인하면 운세 기록을 저장하고<br />AI 트렌드 분석을 받을 수 있습니다
             </p>
             <a
-              href="/login"
+              href="/login?redirect=/history"
               className="inline-block px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold shadow-lg hover:opacity-90 transition"
             >
               로그인하기
