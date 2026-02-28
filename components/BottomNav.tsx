@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
+import { getCurrentBannerHeight } from '@/lib/ads/admob'
 
 const tabs = [
   { href: '/', icon: '🔮', label: '오늘' },
@@ -18,7 +19,7 @@ export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [adBannerHeight, setAdBannerHeight] = useState(0)
+  const [adBannerHeight, setAdBannerHeight] = useState(getCurrentBannerHeight)
 
   useEffect(() => {
     const supabase = createClient()

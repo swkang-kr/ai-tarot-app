@@ -40,6 +40,12 @@ function getBannerId(): string {
 // ─────────────────────────────────────────────
 let initialized = false
 let bannerVisible = false
+let currentBannerHeight = 0  // SizeChanged 이벤트보다 늦게 마운트되는 컴포넌트용 캐시
+
+/** 마지막으로 수신된 배너 높이 (컴포넌트 초기화 시 사용) */
+export function getCurrentBannerHeight(): number {
+  return currentBannerHeight
+}
 
 // ─────────────────────────────────────────────
 // 초기화
@@ -74,7 +80,8 @@ export async function initAdMob(): Promise<void> {
     AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: any) => {
       console.log('[AdMob] 배너 크기 변경:', size)
       if (size?.height) {
-        dispatchBannerHeight(Math.ceil(size.height))
+        currentBannerHeight = Math.ceil(size.height)
+        dispatchBannerHeight(currentBannerHeight)
       }
     })
   } catch (err) {
@@ -111,6 +118,7 @@ export async function hideBanner(): Promise<void> {
   try {
     await AdMob.hideBanner()
     bannerVisible = false
+    currentBannerHeight = 0
     dispatchBannerHeight(0)
   } catch (err) {
     console.warn('[AdMob] 배너 숨기기 실패:', err)
@@ -124,6 +132,7 @@ export async function removeBanner(): Promise<void> {
   try {
     await AdMob.removeBanner()
     bannerVisible = false
+    currentBannerHeight = 0
     dispatchBannerHeight(0)
   } catch (err) {
     console.warn('[AdMob] 배너 제거 실패:', err)

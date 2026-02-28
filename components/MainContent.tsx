@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { getCurrentBannerHeight } from '@/lib/ads/admob'
 
 const NAV_HEIGHT = 64 // BottomNav h-16 = 64px
 
 export default function MainContent({ children }: { children: React.ReactNode }) {
-  const [bannerHeight, setBannerHeight] = useState(0)
+  const [bannerHeight, setBannerHeight] = useState(getCurrentBannerHeight)
 
   useEffect(() => {
     const handler = (e: Event) => {
