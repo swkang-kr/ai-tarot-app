@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.aitarot.app',
+  appId: 'com.byeolbit.unse',
   appName: '별빛 운세',
   webDir: 'out',
   server: {

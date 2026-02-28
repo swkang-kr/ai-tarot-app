@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">별빛 운세</string>
     <string name="title_activity_main">별빛 운세</string>
-    <string name="package_name">com.aitarot.app</string>
-    <string name="custom_url_scheme">com.aitarot.app</string>
+    <string name="package_name">com.byeolbit.unse</string>
+    <string name="custom_url_scheme">com.byeolbit.unse</string>
 </resources>
