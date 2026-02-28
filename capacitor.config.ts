@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.aitarot.app',
-  appName: 'AI 타로',
+  appName: '별빛 운세',
   webDir: 'out',
   server: {
     // 배포된 웹 URL (SSR 유지, Vercel 등)

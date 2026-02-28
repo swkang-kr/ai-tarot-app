@@ -1,6 +1,6 @@
 {
-  "name": "AI 타로 - 오늘의 운세",
-  "short_name": "AI 타로",
+  "name": "별빛 운세 - 오늘의 운세",
+  "short_name": "별빛 운세",
   "description": "AI가 읽어주는 오늘의 타로 운세",
   "start_url": "/",
   "display": "standalone",
@@ -15,8 +15,8 @@
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "AI 타로",
-      "short_name": "타로",
+      "name": "별빛 운세",
+      "short_name": "별빛",
       "url": "/",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },

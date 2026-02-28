@@ -12,35 +12,35 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'AI 타로 - 오늘의 운세',
+  title: '별빛 운세 - 오늘의 운세',
   description:
-    'AI가 읽어주는 오늘의 타로 운세. 생년월일만 입력하면 사랑운, 재물운을 무료로 확인하세요.',
-  keywords: ['타로', '타로카드', '오늘의운세', '무료타로', 'AI타로', '운세'],
+    '별빛 운세에서 오늘의 타로 운세를 확인하세요. 생년월일만 입력하면 사랑운, 재물운을 무료로 확인하세요.',
+  keywords: ['타로', '타로카드', '오늘의운세', '무료타로', '별빛운세', '운세'],
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'AI 타로'
+    title: '별빛 운세'
   },
   openGraph: {
     type: 'website',
     locale: 'ko_KR',
-    title: 'AI 타로 - 오늘의 운세',
-    description: 'AI가 읽어주는 오늘의 타로 운세',
-    siteName: 'AI 타로',
+    title: '별빛 운세 - 오늘의 운세',
+    description: '별빛 운세에서 오늘의 타로 운세를 확인하세요',
+    siteName: '별빛 운세',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'AI 타로'
+        alt: '별빛 운세'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AI 타로',
-    description: 'AI가 읽어주는 오늘의 타로 운세',
+    title: '별빛 운세',
+    description: '별빛 운세에서 오늘의 타로 운세를 확인하세요',
     images: ['/og-image.png']
   }
 }
