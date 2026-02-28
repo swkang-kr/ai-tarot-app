@@ -84,6 +84,9 @@ export default function PsychologyPage() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-5"
             >
+              <a href="/premium" className="inline-flex items-center gap-1 text-purple-300 hover:text-white text-sm mb-3 transition-colors">
+                ← 프리미엄
+              </a>
               <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
                 <div className="text-center mb-7">
                   <motion.div
