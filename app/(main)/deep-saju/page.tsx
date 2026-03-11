@@ -8,10 +8,12 @@ import SajuCard from '@/components/SajuCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import type { DeepSajuResponse } from '@/lib/ai/deep-saju-prompt'
 import { getSajuInfo } from '@/lib/utils/saju'
+import GenderSelect, { type Gender } from '@/components/GenderSelect'
 
 export default function DeepSajuPage() {
   const [birthDate, setBirthDate] = useState<Date | null>(null)
   const [birthHour, setBirthHour] = useState<number | null>(null)
+  const [gender, setGender] = useState<Gender | null>(null)
   const [step, setStep] = useState<'input' | 'loading' | 'result'>('input')
   const [result, setResult] = useState<DeepSajuResponse | null>(null)
   const [sajuInfo, setSajuInfo] = useState<ReturnType<typeof getSajuInfo> | null>(null)
@@ -36,7 +38,7 @@ export default function DeepSajuPage() {
       const res = await fetch('/api/deep-saju', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ birthDate: dateStr, birthHour }),
+        body: JSON.stringify({ birthDate: dateStr, birthHour, gender }),
       })
 
       if (!res.ok) {
@@ -94,6 +96,8 @@ export default function DeepSajuPage() {
                   <label className="block text-white mb-2 text-sm font-medium">생년월일</label>
                   <DatePicker selected={birthDate} onChange={setBirthDate} maxDate={new Date()} className="w-full" />
                 </div>
+
+                <GenderSelect value={gender} onChange={setGender} />
 
                 <div className="mb-6">
                   <label className="block text-white mb-2 text-sm font-medium">

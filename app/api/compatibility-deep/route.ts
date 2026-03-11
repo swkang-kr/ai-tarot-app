@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateDeepCompatibility } from '@/lib/ai/deep-compatibility-prompt'
-import { getSajuInfo } from '@/lib/utils/saju'
+import { getSajuInfo, getCrossCompatibilityRelations } from '@/lib/utils/saju'
 import { isValidBirthDate } from '@/lib/utils/validation'
 
 export async function POST(req: NextRequest) {
@@ -51,13 +51,15 @@ export async function POST(req: NextRequest) {
 
     const person1Saju = getSajuInfo(person1BirthDate, person1BirthHour ?? undefined)
     const person2Saju = getSajuInfo(person2BirthDate, person2BirthHour ?? undefined)
+    const crossRelations = getCrossCompatibilityRelations(person1Saju, person2Saju)
 
     const reading = await generateDeepCompatibility(
       person1Saju,
       person2Saju,
       relationshipType,
       person1BirthDate,
-      person2BirthDate
+      person2BirthDate,
+      crossRelations
     )
 
     // Only save to DB if logged in

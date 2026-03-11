@@ -6,6 +6,7 @@ import DatePicker from '@/components/DatePicker'
 import AnnualCard from '@/components/AnnualCard'
 import LoadingAnimation from '@/components/LoadingAnimation'
 import type { AnnualResponse } from '@/lib/ai/annual-prompt'
+import GenderSelect, { type Gender } from '@/components/GenderSelect'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const YEAR_OPTIONS = [CURRENT_YEAR, CURRENT_YEAR + 1]
@@ -15,6 +16,7 @@ const MONTH_NAMES = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8�
 export default function AnnualPage() {
   const [birthDate, setBirthDate] = useState<Date | null>(null)
   const [birthHour, setBirthHour] = useState<number | null>(null)
+  const [gender, setGender] = useState<Gender | null>(null)
   const [targetYear, setTargetYear] = useState(CURRENT_YEAR)
   const [step, setStep] = useState<'input' | 'loading' | 'result'>('input')
   const [result, setResult] = useState<AnnualResponse | null>(null)
@@ -37,6 +39,7 @@ export default function AnnualPage() {
         body: JSON.stringify({
           birthDate: birthDate.toISOString().split('T')[0],
           birthHour,
+          gender,
           targetYear,
         }),
       })
@@ -116,6 +119,8 @@ export default function AnnualPage() {
                   <label className="block text-white mb-2 text-sm font-medium">생년월일</label>
                   <DatePicker selected={birthDate} onChange={setBirthDate} maxDate={new Date()} className="w-full" />
                 </div>
+
+                <GenderSelect value={gender} onChange={setGender} />
 
                 <div className="mb-6">
                   <label className="block text-white mb-2 text-sm font-medium">

@@ -1,5 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo } from '@/lib/utils/saju'
+import { getSipseong } from '@/lib/utils/saju'
 
 export interface DeepCompatibilityResponse {
   scores: {
@@ -105,9 +106,20 @@ export async function generateDeepCompatibility(
   person2Saju: SajuInfo,
   relationshipType: string,
   person1Birth: string,
-  person2Birth: string
+  person2Birth: string,
+  crossRelations?: string[]
 ): Promise<DeepCompatibilityResponse> {
   const relLabel = RELATION_MAP[relationshipType] ?? '연인'
+
+  const crossNote = crossRelations && crossRelations.length > 0
+    ? `\n두 사람 간 실계산 형·충·합 관계:\n${crossRelations.map(r => `- ${r}`).join('\n')}`
+    : '\n두 사람 간 특이 형·충·합: 없음'
+
+  // 십성 교차 분석
+  const gan1 = person1Saju.dayPillar[0]
+  const gan2 = person2Saju.dayPillar[0]
+  const sipseong1sees2 = getSipseong(gan1, gan2)
+  const sipseong2sees1 = getSipseong(gan2, gan1)
 
   const userPrompt = `두 사람의 ${relLabel} 궁합을 심층 분석해주세요.
 
@@ -121,8 +133,20 @@ export async function generateDeepCompatibility(
 - 월주: ${person2Saju.monthPillar} (${person2Saju.monthPillarHanja})
 - 일주: ${person2Saju.dayPillar} (${person2Saju.dayPillarHanja})${person2Saju.hourPillar ? `\n- 시주: ${person2Saju.hourPillar} (${person2Saju.hourPillarHanja})` : ''}
 
-두 일간(日干)의 오행 상생/상극 관계, 월지 충합, 연지 삼합·방합을 종합하여
-갈등 포인트·조화 포인트·5년 전망·12개월 궁합 흐름까지 심층 분석해주세요.`
+십성(十星) 교차 분석 (궁합 핵심 지표):
+- ${person1Birth}생(${gan1}) 기준: 상대방(${gan2})은 → ${sipseong1sees2}
+- ${person2Birth}생(${gan2}) 기준: 상대방(${gan1})은 → ${sipseong2sees1}
+${crossNote}
+
+두 일간(日干)의 오행 상생/상극 관계, 십성 교차 분석, 위에서 실계산된 월지 충합·연지 삼합을 최우선 반영하여
+갈등 포인트·조화 포인트·5년 전망·12개월 궁합 흐름까지 심층 분석해주세요.
+
+[심층 궁합 분석 기준]
+- 일지(日支) 관계: 궁합에서 가장 중요 — 합이면 감정적 안정, 충이면 갈등·자극
+- 일간(日干) 오행 관계: 상생이면 서로 돕는 관계, 상극이면 강한 끌림 또는 갈등
+- 월지(月支) 관계: 생활 방식·가치관 조화 판단
+- 역마살(驛馬煞): 양쪽 중 한 명에게 있으면 이동·거리 문제 가능성
+- 십성 배치: 한 사람의 재성(財星)이 다른 사람의 관성(官星)과 상통하면 인연 깊음`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

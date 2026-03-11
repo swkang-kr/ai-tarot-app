@@ -152,20 +152,27 @@ export default function LuckyCard({ luckyInfo, birthDateStr }: LuckyCardProps) {
         transition={{ delay: 0.4 }}
         className="bg-white/5 rounded-2xl p-4"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className="text-lg">{ELEMENT_LUCKY_COLOR[todayElement]?.emoji ?? '✨'}</span>
             <div>
-              <p className="text-white/80 text-xs font-medium">오늘 일진</p>
-              <p className="text-white/50 text-[10px]">{ELEMENT_NAME[todayElement]}</p>
+              <p className="text-white/80 text-xs font-semibold">오늘 일진</p>
+              {'todayIljin' in luckyInfo && (
+                <p className="text-white font-bold text-sm">{(luckyInfo as LuckyInfo & { todayIljin: string }).todayIljin}</p>
+              )}
             </div>
           </div>
           <div className="text-right">
-            <p className="text-white/80 text-xs font-medium">내 일간</p>
-            <p className="text-white/50 text-[10px]">{ELEMENT_NAME[baseElement]}</p>
+            <p className="text-white/80 text-xs font-medium">내 일간 오행</p>
+            <p className="text-white/60 text-xs">{ELEMENT_NAME[baseElement]}</p>
           </div>
         </div>
-        <p className="text-white/50 text-[11px] mt-2 leading-relaxed">
+        {'todayIljinMeaning' in luckyInfo && (
+          <p className="text-white/60 text-[11px] leading-relaxed">
+            {(luckyInfo as LuckyInfo & { todayIljinMeaning: string }).todayIljinMeaning}
+          </p>
+        )}
+        <p className="text-white/40 text-[11px] mt-1.5 leading-relaxed">
           {color.desc} · 오늘은 {color.name} 계열의 물건이나 공간에서 행운이 찾아옵니다.
         </p>
       </motion.div>

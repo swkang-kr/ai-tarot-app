@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateWeeklyReading } from '@/lib/ai/weekly-prompt'
-import { getSajuInfo } from '@/lib/utils/saju'
+import { getSajuInfo, getDetailedAnalysis } from '@/lib/utils/saju'
 import { isValidBirthDate } from '@/lib/utils/validation'
 
 function getWeekDates(): { weekStart: string; dates: string[] } {
@@ -62,9 +62,10 @@ export async function POST(req: NextRequest) {
 
     // Calculate saju
     const saju = getSajuInfo(birthDate, birthHour ?? undefined)
+    const detailed = getDetailedAnalysis(saju)
 
     // Generate weekly reading
-    const reading = await generateWeeklyReading(birthDate, saju, weekStart, dates)
+    const reading = await generateWeeklyReading(birthDate, saju, weekStart, dates, detailed.bodyStrength)
 
     // Only save to DB if logged in
     if (user) {

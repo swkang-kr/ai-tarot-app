@@ -1,5 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo } from '@/lib/utils/saju'
+import { getSamjae, getYearJi } from '@/lib/utils/saju'
+import { calculateTojeongGwe, getKoreanAge, getGweName, getGweNameShort } from '@/lib/utils/tojeong'
 
 export interface TojeongResponse {
   gwe: string             // 괘명 (예: "천지비괘")
@@ -57,6 +59,16 @@ export async function generateTojeong(
   targetYear: number,
   lunarBirth: { year: number; month: number; day: number }
 ): Promise<TojeongResponse> {
+  // 코드로 괘를 미리 계산하여 AI에게 전달 (AI의 수학 오류 방지)
+  // 일진상수는 음력 생월 초하루 일진 기준으로 자동 계산됨
+  const birthYear = parseInt(birthDate.split('-')[0])
+  const age = getKoreanAge(birthYear, targetYear)
+  const gweResult = calculateTojeongGwe(targetYear, lunarBirth.month, lunarBirth.day, age)
+
+  const birthYearJi = saju.yearPillar[1]
+  const targetYearJi = getYearJi(targetYear)
+  const samjae = getSamjae(birthYearJi, targetYearJi)
+
   const userPrompt = `${birthDate}생 사용자의 ${targetYear}년 토정비결을 풀이해주세요.
 
 사주팔자:
@@ -65,15 +77,20 @@ export async function generateTojeong(
 - 일주: ${saju.dayPillar} (${saju.dayPillarHanja})${saju.hourPillar ? `\n- 시주: ${saju.hourPillar} (${saju.hourPillarHanja})` : ''}
 
 음력 생년월일: ${lunarBirth.year}년 ${lunarBirth.month}월 ${lunarBirth.day}일
+세는나이: ${age}세
 
-${targetYear}년 태세(太歲): ${targetYear}년의 간지를 기준으로 분석
+[이미 계산된 괘 - 이 값을 그대로 사용하세요]
+- 상괘(上卦): ${gweResult.upperGwe} (1~8 중 ${gweResult.upperGwe}번째 괘상)
+- 중괘(中卦): ${gweResult.middleGwe} (1~6 중 ${gweResult.middleGwe}번째 괘상)
+- 하괘(下卦): ${gweResult.lowerGwe} (1~3 중 ${gweResult.lowerGwe}번째 괘상)
+- 괘 코드: ${gweResult.gweCode}
 
-토정비결 산출 방법:
-- 상괘(上卦): 태세 상수 + 나이 = 8로 나눈 나머지
-- 중괘(中卦): 월건 상수 + 생월 = 6으로 나눈 나머지
-- 하괘(下卦): 일진 상수 + 생일 = 3으로 나눈 나머지
+삼재(三災) 여부: ${samjae.isSamjae ? `${samjae.type} — ${samjae.description}` : '해당 없음'}
 
-위 원리에 따라 ${targetYear}년의 괘를 산출하고, 전통 토정비결 해석 방식으로 풀이해주세요.`
+괘 이름 참고: ${getGweName(gweResult.upperGwe, gweResult.middleGwe, gweResult.lowerGwe)} (${getGweNameShort(gweResult.upperGwe, gweResult.middleGwe)})
+gweNumber는 (상괘-1)*18 + (중괘-1)*3 + 하괘 = ${(gweResult.upperGwe - 1) * 18 + (gweResult.middleGwe - 1) * 3 + gweResult.lowerGwe}으로 설정하세요.
+위 괘의 전통 토정비결 의미를 바탕으로 해석해주세요.
+삼재에 해당하는 경우 yearFortune과 caution에 반드시 반영하세요.`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

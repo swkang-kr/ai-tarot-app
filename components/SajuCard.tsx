@@ -106,13 +106,24 @@ export default function SajuCard({ saju, analysis }: SajuCardProps) {
         transition={{ delay: 0.4 }}
         className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10"
       >
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span className="text-sm font-semibold text-white">
             일간: {detailed.dayMaster.name}({detailed.dayMaster.element})
           </span>
           <span className="text-xs text-purple-300">
             {detailed.dayMaster.trait}
           </span>
+          {detailed.bodyStrength && detailed.bodyStrength !== '중화(中和)' && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+              detailed.bodyStrength === '신강(身强)'
+                ? 'bg-orange-500/30 text-orange-300'
+                : detailed.bodyStrength === '신약(身弱)'
+                ? 'bg-blue-500/30 text-blue-300'
+                : 'bg-green-500/30 text-green-300'
+            }`}>
+              {detailed.bodyStrength}
+            </span>
+          )}
         </div>
         <p className="text-white/70 text-xs leading-relaxed">
           {detailed.dayMaster.description}
@@ -147,6 +158,75 @@ export default function SajuCard({ saju, analysis }: SajuCardProps) {
         </div>
         <p className="text-white/50 text-[10px] mt-2">{detailed.summary}</p>
       </motion.div>
+
+      {/* 신살(神煞) */}
+      {detailed.sinsal && detailed.sinsal.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.52 }}
+          className="mt-4 space-y-1.5"
+        >
+          <h3 className="text-sm font-semibold text-purple-200 mb-2">✨ 신살(神煞)</h3>
+          {detailed.sinsal.map((sal, i) => (
+            <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg border bg-violet-500/15 border-violet-500/30">
+              <span className="text-xs font-bold flex-shrink-0 text-violet-300">{sal.name.split('(')[0]}</span>
+              <div className="min-w-0">
+                <p className="text-[10px] text-violet-400 mb-0.5">{sal.pillars.join('·')}에 위치</p>
+                <p className="text-xs text-white/70 leading-relaxed">{sal.meaning}</p>
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      )}
+
+      {/* 형·충·합·해·파 특수 관계 */}
+      {detailed.specialRelations && detailed.specialRelations.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.55 }}
+          className="mt-4 space-y-1.5"
+        >
+          <h3 className="text-sm font-semibold text-purple-200 mb-2">⚡ 형·충·합·해·파</h3>
+          {detailed.specialRelations.map((rel, i) => {
+            const typeColors: Record<string, string> = {
+              '충(冲)': 'bg-red-500/20 text-red-300 border-red-500/30',
+              '합(合)': 'bg-green-500/20 text-green-300 border-green-500/30',
+              '형(刑)': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+              '해(害)': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+              '파(破)': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+            }
+            const colorClass = typeColors[rel.type] || 'bg-white/10 text-white/70 border-white/10'
+            return (
+              <div key={i} className={`flex items-start gap-2 p-2.5 rounded-lg border ${colorClass}`}>
+                <span className="text-xs font-bold flex-shrink-0">{rel.type}</span>
+                <span className="text-xs leading-relaxed">{rel.meaning}</span>
+              </div>
+            )
+          })}
+        </motion.div>
+      )}
+
+      {/* 공망(空亡) */}
+      {detailed.gongmang && detailed.gongmang[0] !== '없음' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.58 }}
+          className="mt-4"
+        >
+          <h3 className="text-sm font-semibold text-purple-200 mb-2">🕳️ 공망(空亡)</h3>
+          <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-slate-500/15 border-slate-500/30">
+            <span className="text-xs font-bold flex-shrink-0 text-slate-300">
+              {detailed.gongmang[0]}·{detailed.gongmang[1]}
+            </span>
+            <p className="text-xs text-white/70 leading-relaxed">
+              일주 기준 공망 지지입니다. 해당 지지에 해당하는 육친·분야의 작용이 약화되며, 역설적으로 정신·종교·학문적 소질로 승화될 수 있습니다.
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* AI 사주 분석 */}
       {analysis && (
@@ -202,6 +282,16 @@ export default function SajuCard({ saju, analysis }: SajuCardProps) {
                     <p className="text-white/60 text-[11px] leading-relaxed mt-0.5">
                       <span className="text-purple-300">지지</span> {p.jijiMeaning}
                     </p>
+                    {p.sipseong && p.sipseong !== '일간(日干)' && (
+                      <p className="text-white/60 text-[11px] leading-relaxed mt-0.5">
+                        <span className="text-yellow-400">십성</span> {p.sipseong}
+                      </p>
+                    )}
+                    {p.sipiunsung && (
+                      <p className="text-white/60 text-[11px] leading-relaxed mt-0.5">
+                        <span className="text-cyan-400">십이운성</span> {p.sipiunsung}
+                      </p>
+                    )}
                   </div>
                 )
               ))}

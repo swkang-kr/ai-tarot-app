@@ -1,13 +1,14 @@
 import { anthropic } from '@/lib/ai/client'
 import { ClaudeResponse } from '@/types'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getElement, getDayMasterTrait } from '@/lib/utils/saju'
+import { getElement, getDayMasterTrait, getDetailedAnalysis, getSamjae, getYearJi, getNapumOhaeng } from '@/lib/utils/saju'
 
 interface SelectedCard {
   id: string
   name: string
   nameEn: string
   symbol: string
+  reversedMeaning?: string
 }
 
 const SYSTEM_PROMPT = `당신은 20년 경력의 전문 타로 리더이자 사주팔자 전문가입니다. 사용자의 오늘 운세를 감성적이고 공감되는 톤으로, 구체적이고 실용적인 조언과 함께 생성해주세요.
@@ -87,17 +88,42 @@ export async function generateTarotReading(
 - 음력: ${saju.lunarYear}년 ${saju.isLeapMonth ? '윤' : ''}${saju.lunarMonth}월 ${saju.lunarDay}일
 
 사주팔자의 오행 균형과 일간 특성을 깊이 분석하여 운세에 반영해주세요.`
+
+    // 십성 / 신살 / 삼재 / 납음오행 추가
+    const detail = getDetailedAnalysis(saju)
+    const todayYear = new Date(todayKST).getFullYear()
+    const samjae = getSamjae(saju.yearPillar[1], getYearJi(todayYear))
+    const sipseongList = detail.pillarsDetail.filter(p => p.hangul && p.sipseong && p.sipseong !== '일간(日干)')
+      .map(p => `${p.sipseong}`)
+    const dayNapum = getNapumOhaeng(saju.dayPillar)
+    userPrompt += `
+- 신강/신약: ${detail.bodyStrength}
+- 격국: ${detail.geokguk}
+- 납음오행(일주): ${dayNapum.name}(${dayNapum.element}오행)
+- 주요 십성: ${sipseongList.join(', ') || '없음'}
+- 신살: ${detail.sinsal.length > 0 ? detail.sinsal.map(s => s.name).join(', ') : '없음'}
+- 삼재: ${samjae.isSamjae ? `${samjae.type}` : '없음'}
+- 공망: ${detail.gongmang ? `${detail.gongmang[0]}·${detail.gongmang[1]}` : '없음'}`
   }
 
   if (selectedCards && selectedCards.length === 3) {
+    const cardLines = selectedCards.map((c: SelectedCard & { isReversed?: boolean }, i: number) => {
+      const positions = ['과거·현재', '도전·과제', '미래·조언']
+      const reversedNote = c.isReversed
+        ? ` [역방향 — ${c.reversedMeaning || '에너지 내면화, 지연 또는 내적 성찰'}]`
+        : ' [정방향]'
+      return `${i + 1}번 카드 (${positions[i]}): ${c.symbol} ${c.name} (${c.nameEn})${reversedNote}`
+    }).join('\n')
+
     userPrompt += `
 
 사용자가 직접 선택한 타로 카드 3장:
-1번 카드 (과거/현재): ${selectedCards[0].symbol} ${selectedCards[0].name} (${selectedCards[0].nameEn})
-2번 카드 (도전/과제): ${selectedCards[1].symbol} ${selectedCards[1].name} (${selectedCards[1].nameEn})
-3번 카드 (미래/조언): ${selectedCards[2].symbol} ${selectedCards[2].name} (${selectedCards[2].nameEn})
+${cardLines}
 
-이 3장의 카드 의미를 반영하여 운세를 해석해주세요. 각 카드의 상징과 의미가 전체운, 애정운, 재물운, 건강운, 직장/학업운에 자연스럽게 녹아들도록 해주세요.`
+이 3장의 카드 의미를 깊이 반영하여 운세를 해석해주세요.
+- 역방향 카드는 위 명시된 고유 의미를 정확히 반영하세요 (단순 "지연"이 아닌 카드별 특수 에너지)
+- 정방향 카드의 긍정적 흐름과 역방향의 내적 갈등을 대비하여 운세에 반영하세요
+- 3장 카드 간의 흐름(과거→현재→미래)을 이어지는 이야기로 구성해주세요`
   }
 
   const message = await anthropic.messages.create({

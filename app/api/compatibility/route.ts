@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateCompatibilityReading } from '@/lib/ai/compatibility-prompt'
-import { getSajuInfo } from '@/lib/utils/saju'
+import { getSajuInfo, getCrossCompatibilityRelations, getDetailedAnalysis } from '@/lib/utils/saju'
 import { isValidBirthDate, isValidRelationshipType } from '@/lib/utils/validation'
 
 export async function POST(req: NextRequest) {
@@ -33,12 +33,17 @@ export async function POST(req: NextRequest) {
     // Calculate saju for both persons
     const person1Saju = getSajuInfo(person1BirthDate, person1BirthHour ?? undefined)
     const person2Saju = getSajuInfo(person2BirthDate, person2BirthHour ?? undefined)
+    const crossRelations = getCrossCompatibilityRelations(person1Saju, person2Saju)
+    const person1Detail = getDetailedAnalysis(person1Saju)
+    const person2Detail = getDetailedAnalysis(person2Saju)
 
     // Generate compatibility reading
     const reading = await generateCompatibilityReading(
       person1Saju,
       person2Saju,
-      relationshipType
+      relationshipType,
+      crossRelations,
+      { person1: person1Detail.bodyStrength, person2: person2Detail.bodyStrength }
     )
 
     // Only save to DB if logged in

@@ -8,7 +8,8 @@ interface DreamReading {
   psychologicalMeaning: string
   luckyIndex: number
   cautionIndex: number
-  lottoNumbers: number[]
+  taemongMeaning: string | null
+  recurringPattern: string | null
   keywords: string[]
   advice: string
   category: string
@@ -68,7 +69,7 @@ export default function DreamCard({ reading }: DreamCardProps) {
       </div>
 
       {/* 키워드 */}
-      <div className="flex gap-2 justify-center -mt-3 relative z-10 px-6">
+      <div className="flex gap-2 justify-center -mt-3 relative z-10 px-6 flex-wrap">
         {reading.keywords.map((keyword, idx) => (
           <motion.span
             key={idx}
@@ -116,35 +117,41 @@ export default function DreamCard({ reading }: DreamCardProps) {
           <p className="text-white/80 text-sm leading-relaxed">{reading.psychologicalMeaning}</p>
         </motion.div>
 
-        {/* 로또 번호 (재미) */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center"
-        >
-          <p className="text-purple-300 text-xs mb-2">꿈에서 연상된 행운 번호</p>
-          <div className="flex gap-2 justify-center">
-            {reading.lottoNumbers.map((num, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.6 + idx * 0.1 }}
-                className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center"
-              >
-                <span className="text-white text-sm font-bold">{num}</span>
-              </motion.div>
-            ))}
-          </div>
-          <p className="text-white/40 text-[10px] mt-2">* 재미로만 참고해주세요</p>
-        </motion.div>
+        {/* 태몽 해석 (있을 때만) */}
+        {reading.taemongMeaning && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="p-4 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-500/15 border border-pink-400/30"
+          >
+            <h3 className="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">
+              <span>👶</span> 태몽 해석
+            </h3>
+            <p className="text-white/80 text-sm leading-relaxed">{reading.taemongMeaning}</p>
+          </motion.div>
+        )}
+
+        {/* 반복되는 꿈 패턴 (있을 때만) */}
+        {reading.recurringPattern && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55 }}
+            className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/15 to-purple-500/15 border border-violet-400/25"
+          >
+            <h3 className="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">
+              <span>🔁</span> 반복 꿈 심리
+            </h3>
+            <p className="text-white/80 text-sm leading-relaxed">{reading.recurringPattern}</p>
+          </motion.div>
+        )}
 
         {/* 조언 */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
+          transition={{ delay: 0.7 }}
           className="bg-gradient-to-r from-purple-600/80 to-indigo-600/80 backdrop-blur rounded-2xl p-4 text-center border border-purple-400/20"
         >
           <p className="text-white font-medium text-sm leading-relaxed">

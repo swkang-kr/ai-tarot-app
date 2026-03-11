@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateAnnualReading } from '@/lib/ai/annual-prompt'
-import { getSajuInfo } from '@/lib/utils/saju'
+import { getSajuInfo, getDetailedAnalysis } from '@/lib/utils/saju'
 import { isValidBirthDate, isValidBirthHour } from '@/lib/utils/validation'
 
 export async function POST(req: NextRequest) {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     // user may be null — continue regardless for anonymous access
 
-    const { birthDate, birthHour, targetYear } = await req.json()
+    const { birthDate, birthHour, targetYear, gender } = await req.json()
 
     if (!isValidBirthDate(birthDate)) {
       return NextResponse.json(
@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
     }
 
     const saju = getSajuInfo(birthDate, birthHour ?? undefined)
-    const analysis = await generateAnnualReading(birthDate, saju, year)
+    const detail = getDetailedAnalysis(saju)
+    const analysis = await generateAnnualReading(birthDate, saju, year, detail, gender)
 
     // Only save to DB if logged in
     if (user) {

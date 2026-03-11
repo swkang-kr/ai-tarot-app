@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     // user may be null — continue regardless for anonymous access
 
-    const { birthDate, birthHour } = await req.json()
+    const { birthDate, birthHour, gender } = await req.json()
 
     if (!isValidBirthDate(birthDate)) {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const saju = getSajuInfo(birthDate, birthHour ?? undefined)
     const detail = getDetailedAnalysis(saju)
 
-    const analysis = await generateDeepSaju(birthDate, saju, detail)
+    const analysis = await generateDeepSaju(birthDate, saju, detail, gender)
 
     // Only save to DB if logged in
     if (user) {
