@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateManseryeok } from '@/lib/ai/manseryeok-prompt'
-import { getSajuInfo } from '@/lib/utils/saju'
+import { getSajuInfo, getDetailedAnalysis } from '@/lib/utils/saju'
 import { isValidBirthDate, isValidBirthHour } from '@/lib/utils/validation'
 
 export async function POST(req: NextRequest) {
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const year = targetYear ?? new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCFullYear()
     const birthYear = parseInt(birthDate.split('-')[0], 10)
-    const currentAge = year - birthYear
+    const currentAge = year - birthYear + 1 // 세는나이(한국식): 태어난 해를 1세로 계산
 
     // Check cache only for logged-in users
     if (user) {
@@ -56,7 +56,8 @@ export async function POST(req: NextRequest) {
     }
 
     const saju = getSajuInfo(birthDate, birthHour ?? undefined)
-    const analysis = await generateManseryeok(birthDate, saju, year, currentAge, gender ?? null)
+    const detail = getDetailedAnalysis(saju)
+    const analysis = await generateManseryeok(birthDate, saju, year, currentAge, gender ?? null, detail)
 
     // Only save to DB if logged in
     if (user) {

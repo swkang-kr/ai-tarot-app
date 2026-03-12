@@ -1,5 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo } from '@/lib/utils/saju'
+import { getDetailedAnalysis, getYongshin } from '@/lib/utils/saju'
 
 export interface CareerSajuResponse {
   aptitudeType: string           // 적성 유형 (예: "창조적 리더형 🦁")
@@ -68,6 +69,14 @@ export async function generateCareerSaju(
   birthDate: string,
   saju: SajuInfo
 ): Promise<CareerSajuResponse> {
+  const detail = getDetailedAnalysis(saju)
+  const yongshin = getYongshin(saju, detail)
+
+  const sipseongList = detail.pillarsDetail
+    .filter(p => p.sipseong)
+    .map(p => `${p.label}: ${p.sipseong}`)
+    .join(', ')
+
   const userPrompt = `${birthDate}생 사용자의 사주 기반 직업·적성 분석을 해주세요.
 
 사주팔자:
@@ -75,8 +84,24 @@ export async function generateCareerSaju(
 - 월주: ${saju.monthPillar} (${saju.monthPillarHanja})
 - 일주: ${saju.dayPillar} (${saju.dayPillarHanja})${saju.hourPillar ? `\n- 시주: ${saju.hourPillar} (${saju.hourPillarHanja})` : ''}
 
-일간(日干) ${saju.dayPillar[0]}의 오행적 특성, 월지(月支)의 격국, 용신(喜神) 오행을 종합하여
-적성 유형 · 추천 직군 · 업무 스타일 · 커리어 타임라인을 분석해주세요.
+[사주 심층 분석 (코드 계산값 — 반드시 사용)]
+- 일간: ${detail.dayMaster.name} (${detail.dayMaster.element}) — ${detail.dayMaster.trait}
+- 신강/신약: ${detail.bodyStrength}
+- 격국(格局): ${detail.geokguk}
+- 강한 오행: ${detail.dominantElement} / 약한 오행: ${detail.weakElement}
+- 십성 구성: ${sipseongList}
+- 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+- 기신(忌神): ${yongshin.heukshin}
+- 신살: ${detail.sinsal.length > 0 ? detail.sinsal.map(s => s.name).join(', ') : '없음'}
+
+[직업 적성 분석 기준]
+- 격국이 관성격(정관·편관)이면 조직·공직·전문직 적성
+- 격국이 식상격(식신·상관)이면 창작·서비스·기술·표현 적성
+- 격국이 재성격(정재·편재)이면 사업·금융·영업 적성
+- 격국이 인성격(정인·편인)이면 학문·연구·교육·상담 적성
+- 용신 오행이 목(木)이면 교육·의료·환경, 화(火)이면 IT·미디어·엔터, 토(土)이면 부동산·건설·농업, 금(金)이면 법률·금융·제조, 수(水)이면 유통·물류·예술 분야 유리
+
+위 계산값을 바탕으로 적성 유형 · 추천 직군 · 업무 스타일 · 커리어 타임라인을 분석해주세요.
 부업 적성과 피해야 할 분야도 포함해주세요.`
 
   const message = await anthropic.messages.create({

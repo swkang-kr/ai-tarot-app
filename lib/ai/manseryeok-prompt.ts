@@ -1,6 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
-import type { SajuInfo } from '@/lib/utils/saju'
-import { calculateDaeunStartAge, calculateDaeunPillars } from '@/lib/utils/saju'
+import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
+import { calculateDaeunStartAge, calculateDaeunPillars, getYongshin } from '@/lib/utils/saju'
+import { calculateSaju } from '@fullstackfamily/manseryeok'
 
 export interface ManseryeokResponse {
   currentDaeun: {
@@ -99,7 +100,8 @@ export async function generateManseryeok(
   saju: SajuInfo,
   targetYear: number,
   currentAge: number,
-  gender?: string | null
+  gender?: string | null,
+  detail?: SajuDetailedAnalysis
 ): Promise<ManseryeokResponse> {
   const genderNote = gender === 'male' ? '남성' : gender === 'female' ? '여성' : '성별 미입력'
   // 대운 순행/역행: 생년 천간 음양 + 성별로 결정
@@ -128,6 +130,9 @@ export async function generateManseryeok(
     ? calculateDaeunPillars(saju.monthPillar, daeunDir, daeunStart, 8)
     : []
 
+  // 용신 사전 계산 (detail이 있을 때만)
+  const yongshin = detail ? getYongshin(saju, detail) : null
+
   const userPrompt = `${birthDate}생 (현재 ${currentAge}세, ${genderNote}) 사용자의 만세력을 분석해주세요.
 
 사주팔자:
@@ -153,7 +158,38 @@ ${daeunPillars.map(d => `  · ${d.age}세 대운: ${d.pillar}(${d.hanja})`).join
 - 대운 시작 나이: ${daeunStart}세 (위 대운 간지 목록 기준)
 - 현재 대운 구간: ${daeunStartAge}세 ~ ${daeunEndAge}세 (현재 ${currentAge}세 기준)
 - currentDaeun.ganji와 nextDaeun.ganji는 위 대운 간지 목록에서 그대로 가져오세요.
-- ${daeunDirection === '불명확' ? '성별 정보 없음 — 양방향 모두 제시해주세요.' : `${daeunDirection}으로 산정된 위 대운 간지를 사용하세요.`}`
+- ${daeunDirection === '불명확' ? '성별 정보 없음 — 양방향 모두 제시해주세요.' : `${daeunDirection}으로 산정된 위 대운 간지를 사용하세요.`}
+${detail ? `
+[사주 원국 심층 정보]
+- 신강/신약: ${detail.bodyStrength}
+- 격국: ${detail.geokguk}
+- 강한 오행: ${detail.dominantElement} / 약한 오행: ${detail.weakElement}
+- 용신(用神): ${yongshin?.yongshinFull} — ${yongshin?.reason}
+- 기신(忌神): ${yongshin?.heukshin}
+- 신살: ${detail.sinsal.length > 0 ? detail.sinsal.map(s => s.name).join(', ') : '없음'}
+- 공망: ${detail.gongmang ? `${detail.gongmang[0]}·${detail.gongmang[1]}` : '없음'}
+
+[십이운성(十二運星) 기반 대운 강약 판정 — 일간 ${detail.dayMaster.name} 기준]
+대운 지지의 십이운성이 제왕(帝旺)·임관(臨官)이면 강운 대운, 묘(墓)·절(絶)·병(病)·사(死)이면 주의 대운:
+${daeunPillars.slice(0, 6).map(d => {
+  const SIPIU: Record<string, Record<string, string>> = {
+    '갑': { '해': '장생', '자': '목욕', '축': '관대', '인': '임관', '묘': '제왕', '진': '쇠', '사': '병', '오': '사', '미': '묘', '신': '절', '유': '태', '술': '양' },
+    '을': { '오': '장생', '사': '목욕', '진': '관대', '묘': '임관', '인': '제왕', '축': '쇠', '자': '병', '해': '사', '술': '묘', '유': '절', '신': '태', '미': '양' },
+    '병': { '인': '장생', '묘': '목욕', '진': '관대', '사': '임관', '오': '제왕', '미': '쇠', '신': '병', '유': '사', '술': '묘', '해': '절', '자': '태', '축': '양' },
+    '무': { '인': '장생', '묘': '목욕', '진': '관대', '사': '임관', '오': '제왕', '미': '쇠', '신': '병', '유': '사', '술': '묘', '해': '절', '자': '태', '축': '양' },
+    '정': { '유': '장생', '신': '목욕', '미': '관대', '오': '임관', '사': '제왕', '진': '쇠', '묘': '병', '인': '사', '축': '묘', '자': '절', '해': '태', '술': '양' },
+    '기': { '유': '장생', '신': '목욕', '미': '관대', '오': '임관', '사': '제왕', '진': '쇠', '묘': '병', '인': '사', '축': '묘', '자': '절', '해': '태', '술': '양' },
+    '경': { '사': '장생', '오': '목욕', '미': '관대', '신': '임관', '유': '제왕', '술': '쇠', '해': '병', '자': '사', '축': '묘', '인': '절', '묘': '태', '진': '양' },
+    '신': { '자': '장생', '해': '목욕', '술': '관대', '유': '임관', '신': '제왕', '미': '쇠', '오': '병', '사': '사', '진': '묘', '묘': '절', '인': '태', '축': '양' },
+    '임': { '신': '장생', '유': '목욕', '술': '관대', '해': '임관', '자': '제왕', '축': '쇠', '인': '병', '묘': '사', '진': '묘', '사': '절', '오': '태', '미': '양' },
+    '계': { '묘': '장생', '인': '목욕', '축': '관대', '자': '임관', '해': '제왕', '술': '쇠', '유': '병', '신': '사', '미': '묘', '오': '절', '사': '태', '진': '양' },
+  }
+  const dayGan = detail.dayMaster.name[0]
+  const ji = d.pillar[1]
+  const unsung = (SIPIU[dayGan] || {})[ji] || '불명'
+  const mark = ['제왕', '임관'].includes(unsung) ? ' ★강운' : ['묘', '절', '병', '사'].includes(unsung) ? ' ▼주의' : ''
+  return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark}`
+}).join('\n')}` : ''}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

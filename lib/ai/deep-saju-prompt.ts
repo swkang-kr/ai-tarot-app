@@ -1,6 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
-import { calculateDaeunStartAge, calculateDaeunPillars, getNapumOhaeng } from '@/lib/utils/saju'
+import { calculateDaeunStartAge, calculateDaeunPillars, getNapumOhaeng, getYongshin } from '@/lib/utils/saju'
 
 export interface FortuneCycle {
   period: string       // e.g. "20대 초반"
@@ -76,6 +76,7 @@ export async function generateDeepSaju(
     ? detail.specialRelations.map(r => `- ${r.type}: ${r.chars.join('')} → ${r.meaning}`).join('\n')
     : '- 특이 관계 없음'
   const dayNapum = getNapumOhaeng(saju.dayPillar)
+  const yongshin = getYongshin(saju, detail)
 
   const userPrompt = `${birthDate}생 사용자의 사주팔자를 심층 분석해주세요.
 
@@ -119,32 +120,17 @@ ${specialRelationsStr}
 공망(空亡): ${detail.gongmang ? `${detail.gongmang[0]}·${detail.gongmang[1]}` : '없음'}${detail.gongmangPillars && detail.gongmangPillars.length > 0 ? `\n공망 위치 해석:\n${detail.gongmangPillars.map(g => `- ${g.label}(${g.ji}) 공망: ${g.meaning}`).join('\n')}` : ''}
 납음오행(일주): ${dayNapum.name}(${dayNapum.element}오행) — 일간 부차 오행, 성격과 운명의 부가적 색채
 
+[용신(用神) 코드 계산값 — 반드시 사용]
+- 용신(用神): ${yongshin.yongshinFull}
+- 기신(忌神): ${yongshin.heukshin}
+- 구신(仇神): ${yongshin.boekshin}
+- 용신 근거: ${yongshin.reason}
+
 위 사주 정보(성별·신강신약·격국·지장간·십성·십이운성·신살·공망·특수관계 포함)를 바탕으로 이 사람의 삶의 패턴, 성향, 운명적 흐름을 심층 분석해주세요.
 대운 순행/역행 판단 시 성별을 반드시 반영하세요.
 격국과 십성 구성으로 드러나는 재성·관성·인성의 강약을 재물·직업·학습 패턴과 연결하여 분석하세요.
 십이운성에서 제왕·임관은 강한 발전기, 묘·절·병·사는 주의 시기로 해석하세요.
-
-[용신(喜神) 분석 기준]
-1. 억부용신(抑扶用神) — 기본 원칙
-- 신강(身强): 설기·극제 필요 → 식상 → 재성 → 관성 순
-- 신약(身弱): 보강 필요 → 인성 → 비겁 순
-- 중화(中和): 부족 오행이 용신
-
-2. 조후용신(調候用神) — 계절 불균형 보정 (억부와 불일치 시 우선 고려)
-- 한여름(巳·午·未월) 출생 → 수기(水氣)·금기(金氣)가 조후용신 (무더위 식혀야 함)
-- 한겨울(亥·子·丑월) 출생 → 화기(火氣)·목기(木氣)가 조후용신 (추위 데워야 함)
-- 극건조(辰·戌·丑·未월 토 과다) → 수기 필요
-- 봄(寅·卯·辰월) 목 극강: 금기 억제 또는 화기 설기 고려
-
-3. 종격(從格) 해당 시 — 억부용신 적용 불가
-- 종아격: 식상 오행을 더욱 강화하는 오행이 희신
-- 종재격: 재성 오행 강화 희신
-- 종살격: 관성 오행 강화 희신
-- 종인격: 인성 오행 강화 희신
-
-격국이 종격인 경우 반드시 종격 기준으로 용신을 분석하세요.
-억부용신과 조후용신이 일치하면 더욱 강력한 용신, 불일치 시 조후를 우선합니다.
-yongshin 필드에 용신 오행과 실생활 활용법(색상·방위·음식·직업)을 제시해주세요.`
+yongshin 필드에 위 용신 계산값을 바탕으로 실생활 활용법(색상·방위·음식·직업)을 제시해주세요.`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

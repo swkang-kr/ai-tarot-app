@@ -71,7 +71,7 @@ ${readingText}
 위 기록을 바탕으로 이 기간의 운세 패턴과 흐름을 분석해주세요.`
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1500,
     system: [
       {

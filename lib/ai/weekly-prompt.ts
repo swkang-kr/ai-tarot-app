@@ -1,6 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 import type { SajuInfo } from '@/lib/utils/saju'
+import { getDetailedAnalysis, getYongshin } from '@/lib/utils/saju'
 
 const GAN_HANJA: Record<string, string> = {
   '갑': '甲', '을': '乙', '병': '丙', '정': '丁', '무': '戊',
@@ -26,6 +27,15 @@ export interface WeeklyResponse {
   weeklyAdvice: string
   keywords: string[]
 }
+
+// 천간합(天干合) 쌍 — 합이 되면 기운 융합 (+5점)
+const CHEONGAN_HAP_PAIRS: [string, string][] = [
+  ['갑', '기'], ['을', '경'], ['병', '신'], ['정', '임'], ['무', '계'],
+]
+// 천간충(天干冲) 쌍 — 충이 되면 긴장·갈등 (-8점)
+const CHEONGAN_CHUNG_PAIRS: [string, string][] = [
+  ['갑', '경'], ['을', '신'], ['병', '임'], ['정', '계'],
+]
 
 const SYSTEM_PROMPT = `당신은 20년 경력의 사주팔자 전문가입니다. 사용자의 이번 주 운세를 분석해주세요.
 
@@ -63,6 +73,10 @@ export async function generateWeeklyReading(
   bodyStrength?: string
 ): Promise<WeeklyResponse> {
   const dayNames = ['월', '화', '수', '목', '금', '토', '일']
+
+  // 용신(用神) 사전 계산
+  const detail = getDetailedAnalysis(saju)
+  const yongshin = getYongshin(saju, detail)
 
   // 각 날짜의 일진(日辰) 계산
   const dayIljin = weekDates.map(dateStr => {
@@ -135,22 +149,84 @@ export async function generateWeeklyReading(
     ? `\n일지 충·합 사전 계산:\n${dayAdjNotes.join('\n')}`
     : ''
 
+  // 사용자 일간(日干)과 일진 천간의 합(合)/충(冲) 사전 계산
+  const userDayGan = saju.dayPillar[0]
+  const ganAdjNotes = weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const dayGan = s.dayPillar[0]
+    const isHap = CHEONGAN_HAP_PAIRS.some(([a, b]) =>
+      (dayGan === a && userDayGan === b) || (dayGan === b && userDayGan === a)
+    )
+    const isChung = CHEONGAN_CHUNG_PAIRS.some(([a, b]) =>
+      (dayGan === a && userDayGan === b) || (dayGan === b && userDayGan === a)
+    )
+    if (isHap) return `  · ${dayNames[i]}요일: 천간합(天干合) — 일진 천간 ${dayGan}↔사용자 일간 ${userDayGan} 합 → 기운 융합 추가 +5점`
+    if (isChung) return `  · ${dayNames[i]}요일: 천간충(天干冲) — 일진 천간 ${dayGan}↔사용자 일간 ${userDayGan} 충 → 긴장·갈등 추가 -8점`
+    return null
+  }).filter(Boolean)
+  const ganAdjNote = ganAdjNotes.length > 0
+    ? `\n천간 합·충 사전 계산:\n${ganAdjNotes.join('\n')}`
+    : ''
+
+  // 사용자 년지(年支)·월지(月支)와 일진 지지의 충합 사전 계산
+  const userYearJi = saju.yearPillar[1]
+  const userMonthJi = saju.monthPillar[1]
+  const yearMonthAdjNotes = weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const dayJi = s.dayPillar[1]
+    const notes: string[] = []
+    // 년지 충합
+    const isYearChung = CHUNG_PAIRS_W.some(([a, b]) =>
+      (dayJi === a && userYearJi === b) || (dayJi === b && userYearJi === a)
+    )
+    const isYearHap = YUKHAP_PAIRS_W.some(([a, b]) =>
+      (dayJi === a && userYearJi === b) || (dayJi === b && userYearJi === a)
+    )
+    if (isYearChung) notes.push(`  · ${dayNames[i]}요일: 년지충(年支冲) — 일진 ${dayJi}↔사용자 년지 ${userYearJi} 충 → 추가 -5점`)
+    if (isYearHap)   notes.push(`  · ${dayNames[i]}요일: 년지합(年支合) — 일진 ${dayJi}↔사용자 년지 ${userYearJi} 합 → 추가 +3점`)
+    // 월지 충합
+    const isMonthChung = CHUNG_PAIRS_W.some(([a, b]) =>
+      (dayJi === a && userMonthJi === b) || (dayJi === b && userMonthJi === a)
+    )
+    const isMonthHap = YUKHAP_PAIRS_W.some(([a, b]) =>
+      (dayJi === a && userMonthJi === b) || (dayJi === b && userMonthJi === a)
+    )
+    if (isMonthChung) notes.push(`  · ${dayNames[i]}요일: 월지충(月支冲) — 일진 ${dayJi}↔사용자 월지 ${userMonthJi} 충 → 추가 -7점`)
+    if (isMonthHap)   notes.push(`  · ${dayNames[i]}요일: 월지합(月支合) — 일진 ${dayJi}↔사용자 월지 ${userMonthJi} 합 → 추가 +4점`)
+    return notes
+  }).flat().filter(Boolean)
+  const yearMonthAdjNote = yearMonthAdjNotes.length > 0
+    ? `\n년지·월지 충·합 사전 계산:\n${yearMonthAdjNotes.join('\n')}`
+    : ''
+
   const userPrompt = `${birthDate}생 사용자의 이번 주(${weekStart} ~ ${weekDates[6]}) 운세를 분석해주세요.
 
 사주팔자 정보:
 - 년주: ${saju.yearPillar} (${saju.yearPillarHanja})
 - 월주: ${saju.monthPillar} (${saju.monthPillarHanja})
 - 일주: ${saju.dayPillar} (${saju.dayPillarHanja})${saju.hourPillar ? `\n- 시주: ${saju.hourPillar} (${saju.hourPillarHanja})` : ''}
+- 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+- 기신(忌神): ${yongshin.heukshin}
 
 이번 주 일진(日辰):
 ${weekDates.map((d, i) => `- ${dayNames[i]}요일 (${d}): 일진 ${dayIljin[i]}`).join('\n')}
 
 각 날짜의 일진 천간지지와 사주 일간의 오행 상성을 분석하여 요일별 운세를 산출해주세요. days 배열의 date 필드에는 위의 실제 날짜를 사용해주세요.
 
-[일별 점수 산정 기준 — 신강/신약 억부론 적용]${bodyStrengthNote}
+[일별 점수 산정 기준 — 신강/신약 억부론 + 용신 적용]
+- 용신(${yongshin.yongshinFull}) 오행 일진: 기본점에 추가 +7점 (행운의 날)
+- 기신(${yongshin.heukshin}) 오행 일진: 기본점에 추가 -7점 (주의할 날)${bodyStrengthNote}
 - 같은 주의 일진 간 충(冲)이 있는 날: 추가 -5점
 - 일지충(日支冲): 사용자 일지와 일진 지지가 충이면 추가 -10점
-- 일지합(日支合): 사용자 일지와 일진 지지가 육합이면 추가 +5점${dayAdjNote}`
+- 일지합(日支合): 사용자 일지와 일진 지지가 육합이면 추가 +5점
+- 월지충(月支冲): 사용자 월지와 일진 지지가 충이면 추가 -7점 (직업·사회 관계 영향)
+- 월지합(月支合): 사용자 월지와 일진 지지가 합이면 추가 +4점 (사회적 기운 강화)
+- 년지충(年支冲): 사용자 년지와 일진 지지가 충이면 추가 -5점 (근본 기운 흔들림)
+- 년지합(年支合): 사용자 년지와 일진 지지가 합이면 추가 +3점 (근본 기운 안정)
+- 천간합(天干合): 사용자 일간과 일진 천간이 합이면 추가 +5점 (기운 융합)
+- 천간충(天干冲): 사용자 일간과 일진 천간이 충이면 추가 -8점 (긴장·갈등)${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

@@ -1,5 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
+import { getYongshin } from '@/lib/utils/saju'
 
 export interface PsychologyResponse {
   coreType: string           // 심리 유형명 (예: "불꽃 개척형")
@@ -55,6 +56,13 @@ export async function generatePsychologyReading(
   saju: SajuInfo,
   detail: SajuDetailedAnalysis
 ): Promise<PsychologyResponse> {
+  const yongshin = getYongshin(saju, detail)
+
+  const sipseongList = detail.pillarsDetail
+    .filter(p => p.sipseong)
+    .map(p => `${p.label}: ${p.sipseong}(${p.sipiunsung || ''})`)
+    .join(', ')
+
   const userPrompt = `${birthDate}생 사용자의 사주 심리 분석을 해주세요. 오늘 날짜는 ${today}입니다.
 
 사주 원국:
@@ -62,17 +70,28 @@ export async function generatePsychologyReading(
 - 월주: ${saju.monthPillar} (${saju.monthPillarHanja})
 - 일주: ${saju.dayPillar} (${saju.dayPillarHanja})${saju.hourPillar ? `\n- 시주: ${saju.hourPillar} (${saju.hourPillarHanja})` : ''}
 
-일간 심층 분석:
-- 일간: ${detail.dayMaster.name} (${detail.dayMaster.element})
-- 핵심 성향: ${detail.dayMaster.trait}
-- 상세 설명: ${detail.dayMaster.description}
+[사주 심층 분석 (코드 계산값)]
+- 일간: ${detail.dayMaster.name} (${detail.dayMaster.element}) — ${detail.dayMaster.trait}
+- 신강/신약: ${detail.bodyStrength}
+- 격국(格局): ${detail.geokguk}
+- 강한 오행: ${detail.dominantElement} / 약한 오행: ${detail.weakElement}
+- 십성·십이운성 구성: ${sipseongList || '없음'}
+- 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+- 기신(忌神): ${yongshin.heukshin}
+- 신살: ${detail.sinsal.length > 0 ? detail.sinsal.map(s => s.name).join(', ') : '없음'}
 
-오행 균형:
-${detail.elementBalance.map((e) => `- ${e.name}: ${e.count}개 ${e.emoji}`).join('\n')}
-- 지배 오행: ${detail.dominantElement}
-- 부족 오행: ${detail.weakElement}
+오행 균형 (지장간 포함):
+${detail.elementBalanceWithJijanggan.map((e) => `- ${e.name}: ${e.count}개 ${e.emoji}`).join('\n')}
 
 오행 관계: ${detail.relationships.join(', ')}
+
+[심리 분석 핵심 기준]
+- 격국이 심리 유형의 핵심: 관성격→통제·책임형, 식상격→표현·창의형, 재성격→현실·성취형, 인성격→수용·탐구형, 비겁격→독립·경쟁형
+- 신강+관성 多: 자기 주도적이나 통제 욕구 강
+- 신약+인성 多: 의존적이나 공감 능력 탁월
+- 상관 有: 비판적 사고, 반항적 성향, 창의성
+- 도화살: 매력적이나 감정 기복
+- 역마살: 변화 추구, 안정보다 자유 선호
 
 이 사주를 바탕으로 MBTI를 대체하는 사주 심리 유형을 분석해주세요.`
 

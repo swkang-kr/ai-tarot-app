@@ -1,6 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getSipseong } from '@/lib/utils/saju'
+import { getSipseong, getNapumOhaeng, getDetailedAnalysis, getYongshin } from '@/lib/utils/saju'
 
 export interface DeepCompatibilityResponse {
   scores: {
@@ -121,6 +121,40 @@ export async function generateDeepCompatibility(
   const sipseong1sees2 = getSipseong(gan1, gan2)
   const sipseong2sees1 = getSipseong(gan2, gan1)
 
+  // 납음오행(納音五行) — 두 사람 생년 기준 근본 기운 상성
+  const napum1 = getNapumOhaeng(person1Saju.yearPillar)
+  const napum2 = getNapumOhaeng(person2Saju.yearPillar)
+  const SANGSAENG: Record<string, string> = { '목': '화', '화': '토', '토': '금', '금': '수', '수': '목' }
+  const SANGGEUK: Record<string, string> = { '목': '토', '화': '금', '토': '수', '금': '목', '수': '화' }
+  let napumRelation: string
+  if (napum1.element === napum2.element) {
+    napumRelation = '비화(比和) — 같은 납음 동류 결합, 안정적이지만 고집 충돌 가능'
+  } else if (SANGSAENG[napum1.element] === napum2.element) {
+    napumRelation = `상생(相生) — ${napum1.name}이 ${napum2.name}을 생함, 1번이 2번을 돕는 관계`
+  } else if (SANGSAENG[napum2.element] === napum1.element) {
+    napumRelation = `상생(相生) — ${napum2.name}이 ${napum1.name}을 생함, 2번이 1번을 돕는 관계`
+  } else if (SANGGEUK[napum1.element] === napum2.element) {
+    napumRelation = `상극(相剋) — ${napum1.name}이 ${napum2.name}을 극함, 1번이 주도·압박하는 관계`
+  } else {
+    napumRelation = `상극(相剋) — ${napum2.name}이 ${napum1.name}을 극함, 2번이 주도·압박하는 관계`
+  }
+  const napumNote = `\n납음오행(納音五行) 근본 기운 상성:
+- 첫 번째 사람 생년 납음: ${napum1.name}(${napum1.element})
+- 두 번째 사람 생년 납음: ${napum2.name}(${napum2.element})
+- 납음 관계: ${napumRelation}`
+
+  // 용신/기신 교차 분석
+  const detail1 = getDetailedAnalysis(person1Saju)
+  const detail2 = getDetailedAnalysis(person2Saju)
+  const yongshin1 = getYongshin(person1Saju, detail1)
+  const yongshin2 = getYongshin(person2Saju, detail2)
+  const yongshinNote = `\n용신/기신 교차 분석 (궁합 오행 상성의 핵심):
+- 첫 번째 사람 신강/신약: ${detail1.bodyStrength} / 용신(用神): ${yongshin1.yongshinFull} / 기신(忌神): ${yongshin1.heukshin}
+- 두 번째 사람 신강/신약: ${detail2.bodyStrength} / 용신(用神): ${yongshin2.yongshinFull} / 기신(忌神): ${yongshin2.heukshin}
+※ A의 용신 오행 = B의 일간 오행 → A에게 B는 에너지원, 궁합 긍정적
+※ A의 기신 오행 = B의 일간 오행 → A에게 B는 스트레스 요인, 갈등 주의
+※ 신강+신약 조합: 상호 보완적 역할 분담 가능`
+
   const userPrompt = `두 사람의 ${relLabel} 궁합을 심층 분석해주세요.
 
 첫 번째 사람 (${person1Birth}생):
@@ -136,9 +170,9 @@ export async function generateDeepCompatibility(
 십성(十星) 교차 분석 (궁합 핵심 지표):
 - ${person1Birth}생(${gan1}) 기준: 상대방(${gan2})은 → ${sipseong1sees2}
 - ${person2Birth}생(${gan2}) 기준: 상대방(${gan1})은 → ${sipseong2sees1}
-${crossNote}
+${crossNote}${napumNote}${yongshinNote}
 
-두 일간(日干)의 오행 상생/상극 관계, 십성 교차 분석, 위에서 실계산된 월지 충합·연지 삼합을 최우선 반영하여
+두 일간(日干)의 오행 상생/상극 관계, 납음오행 근본 기운, 십성 교차 분석, 용신/기신 교차 상성, 위에서 실계산된 월지 충합·연지 삼합을 최우선 반영하여
 갈등 포인트·조화 포인트·5년 전망·12개월 궁합 흐름까지 심층 분석해주세요.
 
 [심층 궁합 분석 기준]

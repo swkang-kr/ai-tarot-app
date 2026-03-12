@@ -109,6 +109,10 @@ export default function HomePage() {
               name: c.name,
               nameEn: c.nameEn,
               symbol: c.symbol,
+              element: c.element,
+              isReversed: c.isReversed,
+              uprightKeywords: c.uprightKeywords,
+              reversedMeaning: c.reversedMeaning,
             })),
           }),
         })

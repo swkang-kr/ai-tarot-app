@@ -175,8 +175,9 @@ export function calculateLucky(saju: SajuInfo, today: Date = new Date(), bodyStr
   }
   const todayJiEl = JIJI_EL_SHORT[todayJi] || ''
   if (todayJiEl) {
-    if (SANGSAENG[todayJiEl] === baseElement) score = Math.min(100, score + 7)  // 지지가 나를 생함
-    else if (SANGGEUK[todayJiEl] === baseElement) score = Math.max(10, score - 7) // 지지가 나를 극함
+    // 지지 오행 보정: 용신(boostElement) 기준 (천간 보정과 동일 기준)
+    if (SANGSAENG[todayJiEl] === boostElement) score = Math.min(100, score + 7)  // 지지가 용신 생함
+    else if (SANGGEUK[todayJiEl] === boostElement) score = Math.max(10, score - 7) // 지지가 용신 극함
   }
 
   // ── 충일(冲日): 일진 지지와 사용자 일지(日支) 충이면 변동·불안 -10 ─

@@ -9,6 +9,8 @@ export interface TarotCard {
   isReversed: boolean
   /** 오행 원소: 목(木)·화(火)·토(土)·금(金)·수(水) */
   element: string
+  /** 정방향 핵심 키워드 */
+  uprightKeywords: string
   /** 역방향 시 고유 해석 키워드 */
   reversedMeaning: string
 }
@@ -80,6 +82,48 @@ const SUIT_ELEMENT: Record<string, string> = {
   'cups': '수(水)',       // Water — 감정·직관·관계
   'swords': '금(金)',     // Air → 금(金) — 이성·갈등·결단
   'pentacles': '토(土)',  // Earth — 물질·재물·현실
+}
+
+// Major Arcana 정방향 핵심 키워드
+const MAJOR_UPRIGHT: Record<string, string> = {
+  'the-fool':          '새로운 시작, 순수한 열정, 모험, 자유로운 영혼, 무한한 가능성',
+  'the-magician':      '의지력, 창조력, 능력 발휘, 현실화, 기술과 집중',
+  'the-high-priestess':'직관, 내면의 지혜, 신비, 잠재의식, 침묵 속의 진실',
+  'the-empress':       '풍요, 창조성, 모성, 아름다움, 자연과의 연결',
+  'the-emperor':       '권위, 안정, 구조, 아버지의 힘, 질서와 통제',
+  'the-hierophant':    '전통, 가르침, 제도, 신앙, 정통적 지혜',
+  'the-lovers':        '선택, 사랑, 조화, 가치관, 깊은 유대감',
+  'the-chariot':       '의지, 승리, 제어, 전진, 결단력 있는 행동',
+  'strength':          '용기, 인내, 내면의 힘, 자기 통제, 야성과의 조화',
+  'the-hermit':        '고독한 지혜, 내면 탐구, 안내자, 성찰, 혼자만의 시간',
+  'wheel-of-fortune':  '운명의 전환, 새로운 사이클, 기회, 행운, 변화의 바람',
+  'justice':           '균형, 진실, 공정, 원인과 결과, 법과 책임',
+  'the-hanged-man':    '희생, 전환점, 다른 관점, 내려놓음, 기다림의 지혜',
+  'death':             '변환, 끝과 새로운 시작, 전환, 놓아줌, 재탄생',
+  'temperance':        '조화, 절제, 인내, 연금술, 균형 잡힌 흐름',
+  'the-devil':         '물질적 욕망, 속박, 그림자 직면, 의존성, 숨겨진 진실',
+  'the-tower':         '급격한 변화, 각성, 파괴에서 탄생, 해방, 낡은 것의 붕괴',
+  'the-star':          '희망, 치유, 영감, 재생, 우주와의 연결',
+  'the-moon':          '직관, 환상, 무의식, 깊은 감정, 두려움 직면',
+  'the-sun':           '기쁨, 성공, 활력, 명료함, 환한 에너지',
+  'judgement':         '각성, 부활, 내면의 부름, 용서, 새로운 나',
+  'the-world':         '완성, 통합, 성취, 세계와의 연결, 여정의 완성',
+}
+
+// Minor Arcana 수트별 정방향 기본 키워드
+const SUIT_UPRIGHT: Record<string, string> = {
+  'wands':     '열정, 창조, 의지, 행동, 영감, 추진력',
+  'cups':      '감정, 직관, 관계, 사랑, 풍요로운 감성',
+  'swords':    '이성, 결단, 진실, 명료한 판단, 도전',
+  'pentacles': '현실, 재물, 안정, 실용성, 물질적 성취',
+}
+
+function getUprightKeywords(id: string): string {
+  if (MAJOR_UPRIGHT[id]) return MAJOR_UPRIGHT[id]
+  for (const [suit, keywords] of Object.entries(SUIT_UPRIGHT)) {
+    if (id.includes(suit)) return keywords
+  }
+  return '새로운 기운, 변화, 성장'
 }
 
 // Major Arcana 역방향 고유 의미
@@ -220,6 +264,7 @@ export const allCards: TarotCard[] = koCards.map(c => ({
   symbol: getSymbol(c.id),
   isReversed: false,
   element: getElement(c.id),
+  uprightKeywords: getUprightKeywords(c.id),
   reversedMeaning: getReversedMeaning(c.id),
 }))
 

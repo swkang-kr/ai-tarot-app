@@ -1,6 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getSipseong, getNapumOhaeng } from '@/lib/utils/saju'
+import { getSipseong, getNapumOhaeng, getDetailedAnalysis, getYongshin } from '@/lib/utils/saju'
 
 export interface CompatibilityBodyStrength {
   person1: string  // '신강(身强)' | '신약(身弱)' | '중화(中和)'
@@ -66,8 +66,19 @@ export async function generateCompatibilityReading(
   }
 
   const crossNote = crossRelations && crossRelations.length > 0
-    ? `\n두 사람 간 형·충·합 분석:\n${crossRelations.map(r => `- ${r}`).join('\n')}`
+    ? `\n두 사람 간 형·충·합·해·파 분석:\n${crossRelations.map(r => `- ${r}`).join('\n')}`
     : ''
+
+  // 용신/기신 분석 — 두 사람의 억부/조후 용신
+  const detail1 = getDetailedAnalysis(person1Saju)
+  const detail2 = getDetailedAnalysis(person2Saju)
+  const yongshin1 = getYongshin(person1Saju, detail1)
+  const yongshin2 = getYongshin(person2Saju, detail2)
+  const yongshinNote = `\n용신/기신 교차 분석 (궁합 오행 상성의 핵심):
+- 첫 번째 사람 용신(用神): ${yongshin1.yongshinFull} / 기신(忌神): ${yongshin1.heukshin}
+- 두 번째 사람 용신(用神): ${yongshin2.yongshinFull} / 기신(忌神): ${yongshin2.heukshin}
+※ A의 용신 오행 = B의 일간 오행 → A에게 B는 에너지원, 긍정적 궁합
+※ A의 기신 오행 = B의 일간 오행 → A에게 B는 스트레스 요인, 갈등 주의`
 
   // 십성 교차 분석: 두 사람의 일간 기준 상대방의 십성 계산
   const gan1 = person1Saju.dayPillar[0]
@@ -124,8 +135,8 @@ export async function generateCompatibilityReading(
 십성(十星) 교차 분석 (궁합의 핵심):
 - 첫 번째 사람(${gan1}) 기준: 두 번째 사람(${gan2})은 → ${sipseong1sees2}
 - 두 번째 사람(${gan2}) 기준: 첫 번째 사람(${gan1})은 → ${sipseong2sees1}
-${crossNote}${napumNote}${bodyStrengthNote}
-두 사주의 오행 상생/상극 관계, 납음오행 근본 기운, 위 형·충·합 분석, 십성 관계, 신강/신약 상보성을 깊이 반영하여 궁합을 봐주세요.
+${crossNote}${napumNote}${bodyStrengthNote}${yongshinNote}
+두 사주의 오행 상생/상극 관계, 납음오행 근본 기운, 위 형·충·합 분석, 십성 관계, 신강/신약 상보성, 용신/기신 교차 상성을 깊이 반영하여 궁합을 봐주세요.
 
 [궁합 판단 핵심 기준]
 - 일지(日支) 관계가 궁합에서 가장 중요: 일지 합(合)은 감정적 안정, 일지 충(冲)은 갈등

@@ -1,6 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
-import { getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars } from '@/lib/utils/saju'
+import { getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars, getYongshin } from '@/lib/utils/saju'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 
 export interface MonthFortune {
@@ -65,7 +65,28 @@ const SYSTEM_PROMPT = `당신은 20년 경력의 사주팔자 전문가입니다
 - score는 0-100 정수, 각 달의 천간지지와 사주 일간의 상호작용 반영
 - fieldScores의 love/wealth/career/health 각각 0-100 정수 (전체 score와 상관관계 있게)
 - bestMonth/worstMonth/lovePeak/wealthPeak/careerPeak은 1-12 정수
-- 실제 사주 분석에 기반한 차별화된 월별 운세`
+- 실제 사주 분석에 기반한 차별화된 월별 운세
+
+[분야별 fieldScores 산정 원칙 — 십성(十星) 기반]
+재물운(wealth):
+  · 재성(財星) 투간 달 / 세운·월운에 재성 오행 강화 → 재물 기회
+  · 신강일 때 재성 달 = 좋음 / 신약일 때 재성 달 = 부담 (체력 소모)
+  · 식상(食傷) 달 → 신강이면 재물 생산 유리
+
+애정운(love):
+  · 남성: 재성(財星)이 배우자·이성성 → 재성 기운 강한 달에 인연·애정 활발
+  · 여성: 관성(官星)이 배우자·이성성 → 관성 기운 강한 달에 인연·애정 활발
+  · 합(合) 기운 달 — 육합·삼합이 월운과 겹치면 만남·화합 에너지 강화
+
+직업·커리어운(career):
+  · 관성(官星) 강한 달 → 직장·승진·공직 유리
+  · 식신·상관(食傷) 강한 달 → 창업·프리랜서·아이디어 유리
+  · 격국이 관격(正官·偏官格)이면 관성 달, 식신격·상관격이면 식상 달 중시
+
+건강운(health):
+  · 신약일 때 관성(官星) 많은 달 → 과로·스트레스 → 건강 주의 (health 낮게)
+  · 신강일 때 인성(印星) 과한 달 → 과잉 에너지 축적 → 건강 주의
+  · 충(冲) 많은 달 → 사고·수술 주의`
 
 /**
  * 해당 연도의 절기(節氣) 정보 반환 — 사주 월령 기준 참고용
@@ -118,6 +139,7 @@ export async function generateAnnualReading(
 성별: ${genderNote}`
 
   if (detail) {
+    const yongshin = getYongshin(saju, detail)
     userPrompt += `
 
 일간 분석:
@@ -125,6 +147,12 @@ export async function generateAnnualReading(
 - 신강/신약: ${detail.bodyStrength}
 - 격국(格局): ${detail.geokguk}
 - 강한 오행: ${detail.dominantElement} / 약한 오행: ${detail.weakElement}
+- 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+- 기신(忌神): ${yongshin.heukshin}
+
+[월별 fieldScores 산정 추가 기준 — 용신/기신 오행]
+- 해당 달 월운 천간·지지 오행이 용신(${yongshin.yongshin}) 오행이면 해당 분야 +5~10점
+- 기신(${yongshin.heukshin}) 오행이면 해당 분야 -5~10점
 
 십성(十星) 및 십이운성 구성:
 ${detail.pillarsDetail.filter(p => p.hangul).map(p => `- ${p.label}: ${p.hangul} → 십성(${p.sipseong || '일간'}), 십이운성(${p.sipiunsung || '없음'})`).join('\n')}
@@ -191,8 +219,55 @@ ${monthPillars.join('\n')}
 - 대운 시작 나이: ${daeunStart}세${currentDaeun ? `\n- 현재 대운(${targetYear}년 기준): ${currentDaeun.pillar}(${currentDaeun.hanja}) — ${currentDaeun.age}세 대운` : ''}${nextDaeun ? `\n- 다음 대운: ${nextDaeun.pillar}(${nextDaeun.hanja}) — ${nextDaeun.age}세부터` : ''}
 
 세운·월운·대운의 교차 분석을 반영하여 월별 운세를 산출해주세요.
-애정운, 재물운, 커리어운의 피크 시기를 분석하고,
-삼재가 있는 경우 yearSummary와 annualAdvice에 반드시 반영하세요.`
+
+[운세 가중치 원칙]
+- 세운(歲運): 연간 운세의 기본 베이스 (60% 영향)
+- 월운(月運): 월별 점수 조정값 (30% 영향)
+- 대운(大運): 10년 흐름 배경 (10% 영향)
+- 적용: 세운 기본 방향에 월운이 순응하면 +5~10점, 역행하면 -5~10점 조정
+
+[삼재(三災) 분야별 적용 원칙]
+삼재가 있는 경우 yearSummary와 annualAdvice에 반드시 반영하고, 월별 점수도 아래 기준으로 하향 조정:
+- 들삼재(삼재 첫 해): 큰 변화·이동·사고 주의 — score 전반적으로 -5~10점, 1분기(봄) 특히 주의
+  예) "올해는 들삼재로 시작의 해입니다. 큰 결정과 이동은 최대한 미루고 안전을 최우선으로 하세요."
+- 눌삼재(삼재 중간 해): 감정·재물 기복, 인내 필요 — score -3~7점, 대인관계 갈등 주의
+  예) "눌삼재의 해로 인내와 절제가 열쇠입니다. 욕심을 내려놓으면 후반부부터 회복됩니다."
+- 날삼재(삼재 마지막 해): 마무리·정리의 해, 신중한 결산 — score -3~5점, 4분기(겨울) 이후 회복
+  예) "날삼재로 삼재의 기운이 걷히는 해입니다. 상반기 정리를 잘하면 하반기부터 새 출발을 준비할 수 있습니다."${detail ? `
+
+[십이운성(十二運星) 기반 월별 강약 참고]
+일간 ${detail.dayMaster.name} 기준 각 월운 지지의 십이운성:
+${(() => {
+  const GAN_HANJA_B: Record<string, string> = { '갑': '甲', '을': '乙', '병': '丙', '정': '丁', '무': '戊', '기': '己', '경': '庚', '신': '辛', '임': '壬', '계': '癸' }
+  const JI_HANJA_B: Record<string, string> = { '자': '子', '축': '丑', '인': '寅', '묘': '卯', '진': '辰', '사': '巳', '오': '午', '미': '未', '신': '申', '유': '酉', '술': '戌', '해': '亥' }
+  const SIPIU: Record<string, Record<string, string>> = {
+    '갑': { '해': '장생', '자': '목욕', '축': '관대', '인': '임관', '묘': '제왕', '진': '쇠', '사': '병', '오': '사', '미': '묘', '신': '절', '유': '태', '술': '양' },
+    '을': { '오': '장생', '사': '목욕', '진': '관대', '묘': '임관', '인': '제왕', '축': '쇠', '자': '병', '해': '사', '술': '묘', '유': '절', '신': '태', '미': '양' },
+    '병': { '인': '장생', '묘': '목욕', '진': '관대', '사': '임관', '오': '제왕', '미': '쇠', '신': '병', '유': '사', '술': '묘', '해': '절', '자': '태', '축': '양' },
+    '무': { '인': '장생', '묘': '목욕', '진': '관대', '사': '임관', '오': '제왕', '미': '쇠', '신': '병', '유': '사', '술': '묘', '해': '절', '자': '태', '축': '양' },
+    '정': { '유': '장생', '신': '목욕', '미': '관대', '오': '임관', '사': '제왕', '진': '쇠', '묘': '병', '인': '사', '축': '묘', '자': '절', '해': '태', '술': '양' },
+    '기': { '유': '장생', '신': '목욕', '미': '관대', '오': '임관', '사': '제왕', '진': '쇠', '묘': '병', '인': '사', '축': '묘', '자': '절', '해': '태', '술': '양' },
+    '경': { '사': '장생', '오': '목욕', '미': '관대', '신': '임관', '유': '제왕', '술': '쇠', '해': '병', '자': '사', '축': '묘', '인': '절', '묘': '태', '진': '양' },
+    '신': { '자': '장생', '해': '목욕', '술': '관대', '유': '임관', '신': '제왕', '미': '쇠', '오': '병', '사': '사', '진': '묘', '묘': '절', '인': '태', '축': '양' },
+    '임': { '신': '장생', '유': '목욕', '술': '관대', '해': '임관', '자': '제왕', '축': '쇠', '인': '병', '묘': '사', '진': '묘', '사': '절', '오': '태', '미': '양' },
+    '계': { '묘': '장생', '인': '목욕', '축': '관대', '자': '임관', '해': '제왕', '술': '쇠', '유': '병', '신': '사', '미': '묘', '오': '절', '사': '태', '진': '양' },
+  }
+  const dayGan = detail.dayMaster.name[0]
+  const sipuTable = SIPIU[dayGan] || {}
+  return Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1
+    const ms = (() => { try { return calculateSaju(targetYear, m, 20) } catch { return null } })()
+    if (!ms) return ''
+    const ji = ms.monthPillar[1]
+    const unsung = sipuTable[ji] || '불명'
+    const strength = ['제왕', '임관'].includes(unsung) ? '★강운' : ['묘', '절', '병', '사'].includes(unsung) ? '▼주의' : ''
+    return `  · ${m}월(${ms.monthPillar}): 십이운성 ${unsung}(${JI_HANJA_B[ji] || ''}) ${strength}`
+  }).filter(Boolean).join('\n')
+})()}
+
+[공망(空亡) 월운 교차 분석]
+공망 지지: ${detail.gongmang ? `${detail.gongmang[0]}(${detail.gongmang[1]})` : '없음'} — 월운 지지와 겹치는 달은 기대·계획이 허황되거나 변수가 생길 수 있으므로 score를 약간 낮추고 summary에 반영하세요.
+${detail.gongmangPillars && detail.gongmangPillars.length > 0 ? `공망 위치: ${detail.gongmangPillars.map(p => `${p.label}(${p.ji}) — ${p.meaning}`).join(' / ')}` : ''}` : ''}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

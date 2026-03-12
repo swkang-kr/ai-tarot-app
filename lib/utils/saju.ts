@@ -358,6 +358,14 @@ const SAMHAP: [string[], string][] = [
   [['사', '유', '축'], '巳酉丑 삼합(三合) - 金局, 결실·완성의 에너지 결집'],
 ]
 
+// 방합(方合) — 동방/남방/서방/북방 방위 3개 지지가 모이면 해당 오행 극강화
+const BANGHAP: [string[], string][] = [
+  [['인', '묘', '진'], '寅卯辰 방합(方合) - 東方 木局, 봄의 생명력·성장 에너지 극강화'],
+  [['사', '오', '미'], '巳午未 방합(方合) - 南方 火局, 여름의 열정·활력 에너지 극강화'],
+  [['신', '유', '술'], '申酉戌 방합(方合) - 西方 金局, 가을의 결실·완성 에너지 극강화'],
+  [['해', '자', '축'], '亥子丑 방합(方合) - 北方 水局, 겨울의 지혜·축적 에너지 극강화'],
+]
+
 // ────────────────────────────────────────────────────────────
 // 십이운성(十二運星) — 일간 × 지지 매핑
 // ────────────────────────────────────────────────────────────
@@ -916,6 +924,28 @@ export function getCrossCompatibilityRelations(saju1: SajuInfo, saju2: SajuInfo)
   checkHyeong(ji1, ji2, '일지')
   checkHyeong(mji1, mji2, '월지')
 
+  // 일지·월지 해(害) 관계
+  const checkHae = (jiA: string, jiB: string, label: string) => {
+    for (const [a, b, meaning] of YUKHAE) {
+      if ((jiA === a && jiB === b) || (jiA === b && jiB === a)) {
+        notes.push(`${label} 해(害): ${jiA}↔${jiB} — ${meaning}`)
+      }
+    }
+  }
+  checkHae(ji1, ji2, '일지')
+  checkHae(mji1, mji2, '월지')
+
+  // 일지·월지 파(破) 관계
+  const checkPa = (jiA: string, jiB: string, label: string) => {
+    for (const [a, b, meaning] of YUKPA) {
+      if ((jiA === a && jiB === b) || (jiA === b && jiB === a)) {
+        notes.push(`${label} 파(破): ${jiA}↔${jiB} — ${meaning}`)
+      }
+    }
+  }
+  checkPa(ji1, ji2, '일지')
+  checkPa(mji1, mji2, '월지')
+
   // 연지 삼합 (두 사람 연지가 같은 삼합 그룹)
   const SAMHAP_GROUPS: [string[], string][] = [
     [['인', '오', '술'], '火局 삼합 — 열정적 결합'],
@@ -1071,6 +1101,119 @@ export function calculateDaeunPillars(
   return results
 }
 
+// ────────────────────────────────────────────────────────────
+// 용신(用神) 계산 — 억부론(抑扶論) + 조후론(調候論) 병행
+// ────────────────────────────────────────────────────────────
+export interface YongshinInfo {
+  /** 용신 오행 단축명 (목/화/토/금/수) */
+  yongshin: string
+  /** 용신 오행 전체명 (목(木) 등) */
+  yongshinFull: string
+  /** 기신(忌神) — 피해야 할 오행 */
+  heukshin: string
+  /** 구신(仇神) — 기신을 생하여 간접적으로 해를 끼치는 오행 */
+  boekshin: string
+  /** 용신 선정 근거 (억부론 or 조후론) */
+  reason: string
+}
+
+/**
+ * 용신(用神)을 계산합니다.
+ * - 억부론: 신강→설기(食傷) 우선, 신약→인성(印星) 우선
+ * - 조후론: 극단적 계절(여름·겨울)에는 억부보다 조후 우선
+ */
+export function getYongshin(saju: SajuInfo, detail: SajuDetailedAnalysis): YongshinInfo {
+  const dayGan = saju.dayPillar[0]
+  const monthJi = saju.monthPillar[1]
+  const dayShort = ELEMENT_SHORT[CHEONGAN_ELEMENT[dayGan] || ''] || ''
+  const bodyStrength = detail.bodyStrength
+
+  // 극단 계절 집합
+  const SUMMER_JI = new Set(['사', '오', '미']) // 火盛 — 조열(燥熱)
+  const WINTER_JI = new Set(['해', '자', '축']) // 水盛 — 한습(寒濕)
+
+  const ELEMENT_FULL: Record<string, string> = {
+    '목': '목(木)', '화': '화(火)', '토': '토(土)', '금': '금(金)', '수': '수(水)',
+  }
+
+  let yongshinShort: string
+  let heukshinShort: string
+  let reason: string
+
+  // ── 0. 종격(從格) 우선 체크 — 억부론 배제 ────────────────────
+  // 종격 사주는 일간이 극도로 고립되어 가장 강한 오행에 순종하는 외격(外格)
+  // 억부론/조후론이 아닌 종격 방향의 오행이 용신이 됨
+  const JONGGUK_YONGSHIN_MAP: Record<string, string> = {
+    '종아격(從兒格)': SANGSAENG[dayShort] || '',                                          // 식상 오행 (내가 생하는 것)
+    '종재격(從財格)': SANGGEUK[dayShort] || '',                                           // 재성 오행 (내가 극하는 것)
+    '종살격(從殺格)': Object.entries(SANGGEUK).find(([, v]) => v === dayShort)?.[0] || '', // 관성 오행 (나를 극하는 것)
+    '종인격(從印格)': Object.entries(SANGSAENG).find(([, v]) => v === dayShort)?.[0] || '',// 인성 오행 (나를 생하는 것)
+  }
+  const jonggukYongshin = JONGGUK_YONGSHIN_MAP[detail.geokguk]
+  if (jonggukYongshin) {
+    // 종격 기신: 용신 오행을 극하는 오행 (억부론과 반대 구조)
+    const jonggukHeuk = Object.entries(SANGGEUK).find(([, v]) => v === jonggukYongshin)?.[0] || ''
+    const jonggukBoek = Object.entries(SANGSAENG).find(([, v]) => v === jonggukHeuk)?.[0] || ''
+    return {
+      yongshin: jonggukYongshin,
+      yongshinFull: ELEMENT_FULL[jonggukYongshin] || jonggukYongshin,
+      heukshin: ELEMENT_FULL[jonggukHeuk] || jonggukHeuk,
+      boekshin: ELEMENT_FULL[jonggukBoek] || jonggukBoek,
+      reason: `종격(從格): ${detail.geokguk} — 가장 강한 오행에 순종, 억부론 배제`,
+    }
+  }
+
+  // ── 1. 억부론(抑扶論) 기반 용신 결정 ────────────────────────
+  if (bodyStrength === '신강(身强)') {
+    // 신강: 설기(食傷, 내가 생하는 오행)로 과잉 기운 소통
+    const seolgi = SANGSAENG[dayShort] || ''
+    yongshinShort = seolgi
+    heukshinShort = Object.entries(SANGSAENG).find(([, v]) => v === dayShort)?.[0] || dayShort
+    reason = `억부론: 신강(身强) → 설기 ${ELEMENT_FULL[seolgi] || seolgi}으로 과잉 기운 소통`
+  } else if (bodyStrength === '신약(身弱)') {
+    // 신약: 인성(나를 생하는 오행)으로 일간 보강
+    const inseong = Object.entries(SANGSAENG).find(([, v]) => v === dayShort)?.[0] || dayShort
+    yongshinShort = inseong
+    heukshinShort = SANGSAENG[dayShort] || '' // 식상은 신약에게 설기 → 독
+    reason = `억부론: 신약(身弱) → 인성 ${ELEMENT_FULL[inseong] || inseong}으로 일간 보강`
+  } else {
+    // 중화: 오행 중 가장 부족한 오행 보완
+    const sorted = [...detail.elementBalanceWithJijanggan].sort((a, b) => a.count - b.count)
+    const weakShort = ELEMENT_SHORT[sorted[0].name] || dayShort
+    yongshinShort = weakShort
+    heukshinShort = SANGGEUK[weakShort] || ''
+    reason = `중화(中和) → 가장 약한 ${ELEMENT_FULL[weakShort] || weakShort} 오행 보완`
+  }
+
+  // ── 2. 조후론(調候論) 보정 — 극단 계절 우선 ─────────────────
+  // 조후론은 신강/신약과 무관하게 일간 오행 + 계절 조합으로 결정
+  // 여름(사오미월): 화·목·토 일간 → 조열(燥熱) → 수(水) 우선
+  //   수 일간은 여름에도 억부=金인성이 적합하므로 제외
+  if (SUMMER_JI.has(monthJi) && ['화', '목', '토'].includes(dayShort)) {
+    yongshinShort = '수'
+    heukshinShort = '화'
+    reason = `조후론 우선: 여름(火月) — 수(水)로 조열(燥熱) 해소 필수`
+  }
+  // 겨울(해자축월): 수·금·토 일간 → 한습(寒濕) → 화(火) 우선
+  //   화 일간은 겨울에도 억부=木인성이 적합하므로 제외
+  if (WINTER_JI.has(monthJi) && ['수', '금', '토'].includes(dayShort)) {
+    yongshinShort = '화'
+    heukshinShort = '수'
+    reason = `조후론 우선: 겨울(水月) — 화(火)로 한습(寒濕) 해소 필수`
+  }
+
+  // 구신(仇神): 기신(忌神)을 생하는 오행 — 간접적으로 해를 끼침
+  const boekshinShort = Object.entries(SANGSAENG).find(([, v]) => v === heukshinShort)?.[0] || ''
+
+  return {
+    yongshin: yongshinShort,
+    yongshinFull: ELEMENT_FULL[yongshinShort] || yongshinShort,
+    heukshin: ELEMENT_FULL[heukshinShort] || heukshinShort,
+    boekshin: ELEMENT_FULL[boekshinShort] || boekshinShort,
+    reason,
+  }
+}
+
 /** 특정 연도의 지지를 반환합니다 (갑자년=1984 기준). */
 export function getYearJi(year: number): string {
   const JIJI_ORDER = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해']
@@ -1210,6 +1353,16 @@ export function getDetailedAnalysis(saju: SajuInfo): SajuDetailedAnalysis {
     } else if (matchCount === 2) {
       const pair = group.filter(c => jijiList.includes(c)) as [string, string]
       specialRelations.push({ type: '합(合)', chars: pair, meaning: meaning.replace('삼합(三合)', '반합(半合)') })
+    }
+  }
+  // 0.5순위: 방합(方合) / 방반합 — 동방·남방·서방·북방 방위 국(局)
+  for (const [group, meaning] of BANGHAP) {
+    const matchCount = group.filter(c => jijiList.includes(c)).length
+    if (matchCount === 3) {
+      specialRelations.push({ type: '합(合)', chars: [group[0], group[2]], meaning })
+    } else if (matchCount === 2) {
+      const pair = group.filter(c => jijiList.includes(c)) as [string, string]
+      specialRelations.push({ type: '합(合)', chars: pair, meaning: meaning.replace('방합(方合)', '방반합(方半合)') })
     }
   }
   // 1순위: 합(合) — 지지 육합
