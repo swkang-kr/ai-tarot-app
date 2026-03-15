@@ -225,6 +225,19 @@ ${detail.specialRelations.length > 0 ? detail.specialRelations.map(r => `- ${r.t
       adjParts.push(`월지충(-5점)`)
     else if (YUKHAP_PAIRS_A.some(([a, b]) => (mJi === a && userMonthJiA === b) || (mJi === b && userMonthJiA === a)))
       adjParts.push(`월지합(+4점)`)
+    // 형(刑) 사전 계산 — 삼형·자묘형·자형
+    const allUserJiA = [userYearJiA, userMonthJiA, userDayJiA, ...(saju.hourPillar ? [saju.hourPillar[1]] : [])]
+    for (const group of [['인', '신', '사'], ['축', '술', '미']]) {
+      if (group.includes(mJi)) {
+        const matchCount = group.filter(ji => ji !== mJi && allUserJiA.includes(ji)).length
+        if (matchCount >= 2) { adjParts.push('삼형완성(-8점)'); break }
+        if (matchCount === 1) { adjParts.push('부분형(-4점)'); break }
+      }
+    }
+    if ((mJi === '자' && allUserJiA.includes('묘')) || (mJi === '묘' && allUserJiA.includes('자')))
+      adjParts.push('자묘형(-4점)')
+    if (['오', '진', '유', '해'].includes(mJi) && allUserJiA.includes(mJi))
+      adjParts.push('자형(-3점)')
     const adjStr = adjParts.length > 0 ? ` [${adjParts.join(' ')}]` : ''
     return `  · ${m}월: ${mp}(${GAN_HANJA_A[mp[0]] || ''}${JI_HANJA_A[mp[1]] || ''}) 월간십성: ${sipseong}${adjStr}`
   })

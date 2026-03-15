@@ -1,7 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
-import { getYongshin, getSipseong, getNapumOhaeng } from '@/lib/utils/saju'
+import { getYongshin, getSipseong, getNapumOhaeng, getSamjae, getYearJi } from '@/lib/utils/saju'
 
 const GAN_HANJA_P: Record<string, string> = {
   '갑': '甲', '을': '乙', '병': '丙', '정': '丁', '무': '戊',
@@ -102,8 +102,13 @@ export async function generatePsychologyReading(
     ? `일진 지지(${todayJi})↔일지(${userDayJiPS}): 합(合) → 오늘 심리 여유롭고 조화로운 상태 todayMood에 반영`
     : `일진 지지(${todayJi})↔일지(${userDayJiPS}): 충합 없음 → 오늘 심리 중립 기조`
 
-  // 현재 연도 세운(歲運) 사전 계산
+  // 삼재(三災) 사전 계산
   const currentYear = new Date().getFullYear()
+  const birthYearJiPS = saju.yearPillar[1]
+  const currentYearJiPS = getYearJi(currentYear)
+  const samjaePS = getSamjae(birthYearJiPS, currentYearJiPS)
+
+  // 현재 연도 세운(歲運) 사전 계산
   const seunCalcPs = calculateSaju(currentYear, 6, 15)
   const seunPillarPs = seunCalcPs.yearPillar
   const seunPillarHanjaPs = seunCalcPs.yearPillarHanja
@@ -159,6 +164,11 @@ ${detail.elementBalanceWithJijanggan.map((e) => `- ${e.name}: ${e.count}개 ${e.
 - 귀문관살(鬼門關煞): 직관이 비상하고 예민한 신경계 → 초현실적 통찰·영적 감수성 탁월 / 동시에 심리적 불안·강박·우울 경향 주의. stressPattern에 "감각 과부하·고독 추구·자기 내면 몰입" 반영. growthDirection에 "예민함을 창의·예술·상담으로 승화" 제안
 - 백호대살(白虎大煞): 강렬한 추진력·생사 기운 감지 → 위기 대응 탁월 / 충동적 행동·극단적 결단 경향. personality에 반영
 - 양인살(羊刃煞): 강한 자아·고집·승부욕 → 집중력 탁월 / 타협 어려움. strengths·weaknesses 모두 반영
+
+삼재(三災): ${samjaePS.isSamjae ? `${samjaePS.type} — ${samjaePS.description}
+- 삼재 심리 영향: 들삼재=불안·충동·급변의 심리 에너지 → todayMood·stressPattern에 불안 요소 반영
+  눌삼재=답답함·인내의 심리 에너지 → growthDirection에 인내·절제 메시지 포함
+  날삼재=마무리·정리의 심리 에너지 → growthDirection에 새 출발 준비 메시지 포함` : '해당 없음'}
 
 이 사주를 바탕으로 MBTI를 대체하는 사주 심리 유형을 분석해주세요.`
 

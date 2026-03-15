@@ -123,12 +123,26 @@ export async function generateWealthSaju(
   const seunPillarHanjaW = seunCalcW.yearPillarHanja
   const seunSipseongW = getSipseong(saju.dayPillar[0], seunPillarW[0])
 
-  // 현재 연도 12개월 월운 사전 계산 (각 달 20일 기준 월주 + 십성)
+  // 세운 지지↔일지 충합 사전 계산 (AI 역법 오류 방지)
+  const CHUNG_W: [string, string][] = [['자','오'],['축','미'],['인','신'],['묘','유'],['진','술'],['사','해']]
+  const YUKHAP_W: [string, string][] = [['자','축'],['인','해'],['묘','술'],['진','유'],['사','신'],['오','미']]
+  const seunJiW = seunPillarW[1]
+  const dayJiW = saju.dayPillar[1]
+  const seunDayNoteW = CHUNG_W.some(([a,b]) => (seunJiW===a&&dayJiW===b)||(seunJiW===b&&dayJiW===a))
+    ? `⚠️ 세운 지지(${seunJiW})↔일지(${dayJiW}): 충(冲) — 올해 재물 충격·손실·급변 주의, overallWealthScore 추가 -8점`
+    : YUKHAP_W.some(([a,b]) => (seunJiW===a&&dayJiW===b)||(seunJiW===b&&dayJiW===a))
+    ? `✅ 세운 지지(${seunJiW})↔일지(${dayJiW}): 합(合) — 올해 재물 안정·수입 기회, overallWealthScore 추가 +6점`
+    : `세운 지지(${seunJiW})↔일지(${dayJiW}): 충합 없음 — 중립 기조`
+
+  // 현재 연도 12개월 월운 사전 계산 (각 달 20일 기준 월주 + 십성 + 십이운성)
   const monthlyPillars = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1
     const s = calculateSaju(currentYear, m, 20)
     const sipseong = getSipseong(saju.dayPillar[0], s.monthPillar[0])
-    return `${m}월: ${s.monthPillar}(${s.monthPillarHanja}) 월간십성: ${sipseong}`
+    const ji = s.monthPillar[1]
+    const unsung = (SIPIU_W[dayGanW] || {})[ji] || '불명'
+    const mark = unsung === '제왕' ? ' ★★★절정' : unsung === '임관' ? ' ★★상승' : ['장생', '관대'].includes(unsung) ? ' ★좋음' : ['묘', '절'].includes(unsung) ? ' ▼▼정체주의' : ['병', '사'].includes(unsung) ? ' ▼하향' : ''
+    return `${m}월: ${s.monthPillar}(${s.monthPillarHanja}) 월간십성: ${sipseong} / 십이운성: ${unsung}${mark}`
   }).join('\n')
 
   // 십성별 분포 집계 (재성/식상/비겁/관성/인성)
@@ -192,7 +206,7 @@ export async function generateWealthSaju(
 - 세운 간지: ${seunPillarW}(${seunPillarHanjaW})
 - 세운 천간 십성: 일간 ${saju.dayPillar[0]} 기준 → ${seunSipseongW}
   (재물운 의미: 편재년=재물 기회·활발한 수입, 정재년=안정 수입·저축 유리, 식신년=재물 생산력 강, 겁재년=재물 경쟁·분산 주의)
-- 세운 지지 ${seunPillarW[1]}와 일지 ${saju.dayPillar[1]}의 충합 여부를 재물 흐름에 반영하세요
+- 세운 지지↔일지 충합 (코드 계산값): ${seunDayNoteW}
 
 삼재(三災): ${samjaeW.isSamjae ? `⚠️ ${samjaeW.type} — ${samjaeW.description}
   · 삼재 해에는 대규모 투자·사업 확장·보증 절대 금지, overallWealthScore -8~12점 하향

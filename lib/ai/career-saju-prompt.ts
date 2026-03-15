@@ -128,6 +128,17 @@ export async function generateCareerSaju(
   const seunPillarHanjaC = seunCalcC.yearPillarHanja
   const seunSipseongC = getSipseong(saju.dayPillar[0], seunPillarC[0])
 
+  // 세운 지지↔일지 충합 사전 계산 (AI 역법 오류 방지)
+  const CHUNG_C: [string, string][] = [['자','오'],['축','미'],['인','신'],['묘','유'],['진','술'],['사','해']]
+  const YUKHAP_C: [string, string][] = [['자','축'],['인','해'],['묘','술'],['진','유'],['사','신'],['오','미']]
+  const seunJiC = seunPillarC[1]
+  const dayJiC = saju.dayPillar[1]
+  const seunDayNoteC = CHUNG_C.some(([a,b]) => (seunJiC===a&&dayJiC===b)||(seunJiC===b&&dayJiC===a))
+    ? `⚠️ 세운 지지(${seunJiC})↔일지(${dayJiC}): 충(冲) — 올해 이직·갈등·급변 주의, careerTimeline 현재 시기 score 추가 -8점`
+    : YUKHAP_C.some(([a,b]) => (seunJiC===a&&dayJiC===b)||(seunJiC===b&&dayJiC===a))
+    ? `✅ 세운 지지(${seunJiC})↔일지(${dayJiC}): 합(合) — 올해 인맥·기회·조직 안정, careerTimeline 현재 시기 score 추가 +6점`
+    : `세운 지지(${seunJiC})↔일지(${dayJiC}): 충합 없음 — 중립 기조`
+
   // 신살별 커리어 가중치 동적 생성 (사용자에게 있는 신살만)
   const sinsalNames = detail.sinsal.map(s => s.name)
   const sinsalCareerLines: string[] = []
@@ -208,7 +219,7 @@ ${sinsalCareerNote}
   (세운 십성 의미를 careerTimeline·bestCareerPeriod에 반영하세요:
    편관년=도전·명예기회·승부, 정관년=안정·승진·조직 공인, 식신년=창의·아이디어·여유,
    상관년=혁신·이직충동·표현력 발휘, 인성년=학습·자격증·귀인, 재성년=사업기회·수익창출)
-- 세운 지지 ${seunPillarC[1]}와 일지 ${saju.dayPillar[1]}의 충합 관계도 올해 커리어 흐름에 반영하세요
+- 세운 지지↔일지 충합 (코드 계산값): ${seunDayNoteC}
 
 삼재(三災): ${samjaeC.isSamjae ? `⚠️ ${samjaeC.type} — ${samjaeC.description}
   · 삼재 해에는 이직·창업·승진 도전 최소화 권장, careerTimeline 현재 시기 score -5~8점 하향
@@ -216,7 +227,19 @@ ${sinsalCareerNote}
   · bestCareerPeriod·sideJobAdvice에 삼재 경고 문구 포함 필수` : '해당 없음'}
 
 위 계산값과 세운·신살 가중치를 반영하여 적성 유형 · 추천 직군 · 업무 스타일 · 커리어 타임라인을 분석해주세요.
-부업 적성과 피해야 할 분야도 포함해주세요.${daeunNote}`
+부업 적성과 피해야 할 분야도 포함해주세요.${daeunNote}
+
+[${currentYear}년 월운 지지 십이운성 — 이달의 커리어 에너지 참고]
+일간 ${dayGanC} 기준 각 달 월운 지지 십이운성:
+${Array.from({ length: 12 }, (_, i) => {
+  const m = i + 1
+  const ms = (() => { try { return calculateSaju(currentYear, m, 20) } catch { return null } })()
+  if (!ms) return null
+  const ji = ms.monthPillar[1]
+  const unsung = (SIPIU_C[dayGanC] || {})[ji] || '불명'
+  const mark = unsung === '제왕' ? ' ★★★절정운' : unsung === '임관' ? ' ★★상승운' : ['장생', '관대'].includes(unsung) ? ' ★좋음' : ['묘', '절'].includes(unsung) ? ' ▼▼정체주의' : ['병', '사'].includes(unsung) ? ' ▼하향주의' : ''
+  return `  · ${m}월(${ms.monthPillar}): 십이운성 ${unsung}${mark}`
+}).filter(Boolean).join('\n')}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

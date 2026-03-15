@@ -1,7 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getDetailedAnalysis, getYongshin, getSipseong, getNapumOhaeng, getSamjae, getYearJi } from '@/lib/utils/saju'
+import { getDetailedAnalysis, getYongshin, getSipseong, getNapumOhaeng, getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars } from '@/lib/utils/saju'
 
 export interface NewYearResponse {
   zodiacSign: string           // 예: "병오(丙午)년 말띠"
@@ -100,7 +100,8 @@ const JI_HANJA_NY: Record<string, string> = {
 export async function generateNewYearReading(
   birthDate: string,
   saju: SajuInfo,
-  targetYear: number
+  targetYear: number,
+  gender?: string | null
 ): Promise<NewYearResponse> {
   const detail = getDetailedAnalysis(saju)
   const yongshin = getYongshin(saju, detail)
@@ -165,6 +166,27 @@ export async function generateNewYearReading(
     return `  · ${m}월: ${mp}(${GAN_HANJA_NY[mp[0]] || ''}${JI_HANJA_NY[mp[1]] || ''}) 월간십성: ${sipseong}${adjStr}`
   })
 
+  // 대운(大運) 현황 사전 계산 (성별 있을 때만)
+  let daeunNoteNY = ''
+  if (gender) {
+    const birthYearGanNY = saju.yearPillar[0]
+    const isYangNY = ['갑', '병', '무', '경', '임'].includes(birthYearGanNY)
+    const daeunDirNY = gender === 'male' ? (isYangNY ? '순행(順行)' : '역행(逆行)') : (isYangNY ? '역행(逆行)' : '순행(順行)')
+    const daeunStartNY = calculateDaeunStartAge(birthDate, birthYearGanNY, gender)
+    const daeunPillarsNY = calculateDaeunPillars(saju.monthPillar, daeunDirNY.includes('순행') ? 'forward' : 'reverse', daeunStartNY, 8)
+    const birthYear = parseInt(birthDate.split('-')[0])
+    const currentAge = targetYear - birthYear + 1
+    const currentDaeun = daeunPillarsNY.findLast(d => d.age <= currentAge)
+    const nextDaeun = daeunPillarsNY.find(d => d.age > currentAge)
+    daeunNoteNY = `\n[대운(大運) 현황 — ${targetYear}년 기준]
+- 대운 방향: ${daeunDirNY} / 대운 시작 나이: ${daeunStartNY}세${currentDaeun ? `
+- 현재 대운: ${currentDaeun.pillar}(${currentDaeun.hanja}) — ${currentDaeun.age}세 대운
+  · 천간기(前5년): ${currentDaeun.age}~${currentDaeun.age + 4}세 (${currentDaeun.pillar[0]} 천간 영향, yearSummary·fourPillarsAdvice에 반영)
+  · 지지기(後5년): ${currentDaeun.age + 5}~${currentDaeun.age + 9}세 (${currentDaeun.pillar[1]} 지지 영향)` : ''}${nextDaeun ? `
+- 다음 대운: ${nextDaeun.pillar}(${nextDaeun.hanja}) — ${nextDaeun.age}세부터` : ''}
+대운 기운을 세운·월운과 교차하여 yearSummary·fourPillarsAdvice·bestCareerPeriod에 반영하세요.`
+  }
+
   const userPrompt = `${birthDate}생 사용자의 ${targetYear}년 신년운세를 분석해주세요.
 
 사주팔자:
@@ -206,7 +228,7 @@ ${monthPillarsNY.join('\n')}
 - ${samjaeNY.type === '들삼재' ? '1분기 score -6~9, 2분기 -5~8, 3분기 -3~5, 4분기 -2~3점 하향' : samjaeNY.type === '눌삼재' ? '1분기 -4~6, 2분기 -5~8, 3분기 -3~5, 4분기 -2~3점 하향' : '1분기 -4~6, 2분기 -3~5, 3분기 -1~3, 4분기 정상 (삼재 걷힘)'}` : ''}
 
 위 세운·월운 간지와 사주 원국의 조화·충극(沖剋) 관계를 분석하고,
-신년운세를 12개월 흐름과 4대 분야(애정·재물·직업·건강)로 풀이해주세요.`
+신년운세를 12개월 흐름과 4대 분야(애정·재물·직업·건강)로 풀이해주세요.${daeunNoteNY}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

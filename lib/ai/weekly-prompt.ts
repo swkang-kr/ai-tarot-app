@@ -297,6 +297,36 @@ export async function generateWeeklyReading(
     ? `\n형(刑) 관계 사전 계산:\n${hyeongNotes.join('\n')}`
     : ''
 
+  // 용신/기신 일진 오행 사전 계산 — AI 오행 판단 오류 방지
+  const GAN_EL_WY: Record<string, string> = {
+    '갑': '목', '을': '목', '병': '화', '정': '화', '무': '토',
+    '기': '토', '경': '금', '신': '금', '임': '수', '계': '수',
+  }
+  const JI_EL_WY: Record<string, string> = {
+    '자': '수', '축': '토', '인': '목', '묘': '목', '진': '토', '사': '화',
+    '오': '화', '미': '토', '신': '금', '유': '금', '술': '토', '해': '수',
+  }
+  const yongshinShort = yongshin.yongshin
+  const heukshinShort = yongshin.heukshin.split('(')[0]
+  const yongshinPts = bodyStrength === '종격(從格)' ? '+10' : '+7'
+  const heukshinPts = bodyStrength === '종격(從格)' ? '-10' : '-7'
+  const yongshinAdjNotes = weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const ganEl = GAN_EL_WY[s.dayPillar[0]] || ''
+    const jiEl = JI_EL_WY[s.dayPillar[1]] || ''
+    if (ganEl === yongshinShort || jiEl === yongshinShort) {
+      return `  · ${dayNames[i]}요일: 용신 오행일(用神日) — 일진 오행(천간:${ganEl}/지지:${jiEl}) 중 용신(${yongshinShort}) 포함 → 추가 ${yongshinPts}점`
+    }
+    if (ganEl === heukshinShort || jiEl === heukshinShort) {
+      return `  · ${dayNames[i]}요일: 기신 오행일(忌神日) — 일진 오행(천간:${ganEl}/지지:${jiEl}) 중 기신(${heukshinShort}) 포함 → 추가 ${heukshinPts}점`
+    }
+    return null
+  }).filter(Boolean)
+  const yongshinAdjNote = yongshinAdjNotes.length > 0
+    ? `\n용신/기신 일진 오행 사전 계산:\n${yongshinAdjNotes.join('\n')}`
+    : ''
+
   // 공망일(空亡日) 사전 계산
   const gongmangJiList = detail.gongmangPillars?.map((p: { ji: string }) => p.ji) || []
   const gongmangNotes = weekDates.map((dateStr, i) => {
@@ -327,8 +357,8 @@ ${weekDates.map((d, i) => `- ${dayNames[i]}요일 (${d}): 일진 ${dayIljin[i]}`
 각 날짜의 일진 천간지지와 사주 일간의 오행 상성을 분석하여 요일별 운세를 산출해주세요. days 배열의 date 필드에는 위의 실제 날짜를 사용해주세요.
 
 [일별 점수 산정 기준 — 신강/신약 억부론 + 용신 적용]
-- 용신(${yongshin.yongshinFull}) 오행 일진: 기본점에 추가 +7점 (행운의 날)
-- 기신(${yongshin.heukshin}) 오행 일진: 기본점에 추가 -7점 (주의할 날)${bodyStrengthNote}
+- 용신(${yongshin.yongshinFull}) 오행 일진: 기본점에 추가 ${yongshinPts}점 → 아래 사전 계산값 참조
+- 기신(${yongshin.heukshin}) 오행 일진: 기본점에 추가 ${heukshinPts}점 → 아래 사전 계산값 참조${bodyStrengthNote}
 - 같은 주의 일진 간 충(冲)이 있는 날: 추가 -5점
 - 일지충(日支冲): 사용자 일지와 일진 지지가 충이면 추가 -10점
 - 일지합(日支合): 사용자 일지와 일진 지지가 육합이면 추가 +5점
@@ -343,7 +373,7 @@ ${weekDates.map((d, i) => `- ${dayNames[i]}요일 (${d}): 일진 ${dayIljin[i]}`
 - 삼합(三合): 일진 지지 + 사주 지지 2개가 삼합 그룹(인오술·신자진·해묘미·사유축) 완성이면 추가 +7점
 - 반합(半合): 일진 지지 + 사주 지지 1개가 삼합 그룹 내 2개 구성이면 추가 +3점
 - 공망일(空亡日): 일진 지지가 사용자 공망과 일치하면 추가 -5점 (기대·계획 변수)
-- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${gongmangNote}${samhapAdjNote}${hyeongNote}`
+- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${gongmangNote}${samhapAdjNote}${hyeongNote}${yongshinAdjNote}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
