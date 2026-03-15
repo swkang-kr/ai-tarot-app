@@ -83,7 +83,8 @@ const SYSTEM_PROMPT = `당신은 동양 전통 꿈해몽과 서양 심리학적 
 
 export async function generateDreamReading(
   dreamContent: string,
-  category?: string
+  category?: string,
+  dreamTime?: string
 ): Promise<DreamResponse> {
   // Sanitize user input - strip control chars, wrap in XML delimiters
   const sanitized = dreamContent.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
@@ -95,6 +96,9 @@ ${sanitized}
 
   if (category) {
     userPrompt += `\n\n꿈의 카테고리: ${category}`
+  }
+  if (dreamTime) {
+    userPrompt += `\n꿈을 꾼 시간대: ${dreamTime} (위 시간대 기준을 반드시 적용하여 category를 판정하세요)`
   }
 
   const message = await anthropic.messages.create({

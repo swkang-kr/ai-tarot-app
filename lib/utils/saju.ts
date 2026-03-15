@@ -1382,6 +1382,20 @@ export function getYongshin(saju: SajuInfo, detail: SajuDetailedAnalysis): Yongs
     reason = `조후론 보조: 가을(戌月) 건조 — 수(水)로 조열 해소`
   }
 
+  // 묘월(卯月, 2~3월): 봄 목기(木氣) 절정 — 신약 금(金) 일간은 목에 극을 받아 토(土) 인성 필요
+  //   금(金) 일간의 인성은 토(土)이므로 토로 금 보강
+  if (monthJi === '묘' && dayShort === '금' && bodyStrength === '신약(身弱)') {
+    yongshinShort = '토'
+    heukshinShort = '목'
+    reason = `조후론 보조: 봄(卯月) 목기 절정, 신약 금(金) — 토(土) 인성으로 보강`
+  }
+  // 유월(酉月, 9월): 가을 금기(金氣) 절정 — 신약 목(木) 일간은 금에 극을 받아 수(水) 인성 필요
+  //   목(木) 일간의 인성은 수(水)이므로 수로 목 보강
+  if (monthJi === '유' && dayShort === '목' && bodyStrength === '신약(身弱)') {
+    yongshinShort = '수'
+    heukshinShort = '금'
+    reason = `조후론 보조: 가을(酉月) 금기 절정, 신약 목(木) — 수(水) 인성으로 보강`
+  }
   // 구신(仇神): 기신(忌神)을 생하는 오행 — 간접적으로 해를 끼침
   const boekshinShort = Object.entries(SANGSAENG).find(([, v]) => v === heukshinShort)?.[0] || ''
   // 희신(喜神): 용신을 생하는 오행 — 간접적으로 용신을 도움
