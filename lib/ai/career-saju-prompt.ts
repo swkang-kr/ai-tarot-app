@@ -102,7 +102,8 @@ export async function generateCareerSaju(
   const daeunStrengthNote = daeunPillarsC.slice(0, 6).map(d => {
     const unsung = (SIPIU_C[dayGanC] || {})[d.pillar[1]] || '불명'
     const mark = unsung === '제왕' ? ' ★★★절정' : unsung === '임관' ? ' ★★상승' : ['장생','관대'].includes(unsung) ? ' ★좋음' : ['묘','절'].includes(unsung) ? ' ▼▼정체' : ['병','사'].includes(unsung) ? ' ▼하향' : ''
-    return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark}`
+    const ganSipseongC = getSipseong(dayGanC, d.pillar[0])
+    return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark} / 천간십성 ${ganSipseongC}`
   }).join('\n')
   const daeunNote = daeunPillarsC.length > 0
     ? `\n[대운(大運) 간지 + 십이운성 강약 — careerTimeline score에 반영]\n${daeunStrengthNote}`

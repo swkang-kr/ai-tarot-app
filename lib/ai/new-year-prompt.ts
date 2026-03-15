@@ -145,6 +145,31 @@ export async function generateNewYearReading(
     ? `[세운 지지 충합 — 코드 계산값]\n${seunChungHapLines.join('\n')}`
     : `[세운 지지 충합 — 코드 계산값]\n  · 세운 지지(${seunJi})와 사주 지지(일지·년지·월지) 간 특별한 충합 없음`
 
+  // 월운 오행·형·십이운성 사전 계산용 상수
+  const GAN_EL_NY: Record<string, string> = {
+    '갑': '목', '을': '목', '병': '화', '정': '화', '무': '토',
+    '기': '토', '경': '금', '신': '금', '임': '수', '계': '수',
+  }
+  const JI_EL_NY: Record<string, string> = {
+    '자': '수', '축': '토', '인': '목', '묘': '목', '진': '토', '사': '화',
+    '오': '화', '미': '토', '신': '금', '유': '금', '술': '토', '해': '수',
+  }
+  const SIPIU_NY: Record<string, Record<string, string>> = {
+    '갑': {'해':'장생','자':'목욕','축':'관대','인':'임관','묘':'제왕','진':'쇠','사':'병','오':'사','미':'묘','신':'절','유':'태','술':'양'},
+    '을': {'오':'장생','사':'목욕','진':'관대','묘':'임관','인':'제왕','축':'쇠','자':'병','해':'사','술':'묘','유':'절','신':'태','미':'양'},
+    '병': {'인':'장생','묘':'목욕','진':'관대','사':'임관','오':'제왕','미':'쇠','신':'병','유':'사','술':'묘','해':'절','자':'태','축':'양'},
+    '무': {'인':'장생','묘':'목욕','진':'관대','사':'임관','오':'제왕','미':'쇠','신':'병','유':'사','술':'묘','해':'절','자':'태','축':'양'},
+    '정': {'유':'장생','신':'목욕','미':'관대','오':'임관','사':'제왕','진':'쇠','묘':'병','인':'사','축':'묘','자':'절','해':'태','술':'양'},
+    '기': {'유':'장생','신':'목욕','미':'관대','오':'임관','사':'제왕','진':'쇠','묘':'병','인':'사','축':'묘','자':'절','해':'태','술':'양'},
+    '경': {'사':'장생','오':'목욕','미':'관대','신':'임관','유':'제왕','술':'쇠','해':'병','자':'사','축':'묘','인':'절','묘':'태','진':'양'},
+    '신': {'자':'장생','해':'목욕','술':'관대','유':'임관','신':'제왕','미':'쇠','오':'병','사':'사','진':'묘','묘':'절','인':'태','축':'양'},
+    '임': {'신':'장생','유':'목욕','술':'관대','해':'임관','자':'제왕','축':'쇠','인':'병','묘':'사','진':'묘','사':'절','오':'태','미':'양'},
+    '계': {'묘':'장생','인':'목욕','축':'관대','자':'임관','해':'제왕','술':'쇠','유':'병','신':'사','미':'묘','오':'절','사':'태','진':'양'},
+  }
+  const userAllJiNY = [saju.yearPillar[1], saju.monthPillar[1], saju.dayPillar[1], ...(saju.hourPillar ? [saju.hourPillar[1]] : [])]
+  const yongshinShortNY = yongshin.yongshin
+  const heukshinShortNY = yongshin.heukshin.split('(')[0]
+
   // 12개월 월운(月運) 천간지지 + 월간십성 + 월지↔일지/년지 충합 사전 계산 — 각 달 20일 기준 (절기 중반)
   const dayGanForSipseongNY = saju.dayPillar[0]
   const monthPillarsNY = Array.from({ length: 12 }, (_, i) => {
@@ -162,8 +187,30 @@ export async function generateNewYearReading(
       adjNotes.push('년지충(-4점)')
     if (YUKHAP_PAIRS_NY.some(([a, b]) => (mJi === a && userYearJi === b) || (mJi === b && userYearJi === a)))
       adjNotes.push('년지합(+3점)')
+    // 형(刑) 체크
+    for (const group of [['인', '신', '사'], ['축', '술', '미']]) {
+      if (group.includes(mJi)) {
+        const matchCount = group.filter(ji => ji !== mJi && userAllJiNY.includes(ji)).length
+        if (matchCount >= 2) { adjNotes.push('삼형완성(-8점)'); break }
+        if (matchCount === 1) { adjNotes.push('부분형(-4점)'); break }
+      }
+    }
+    if ((mJi === '자' && userAllJiNY.includes('묘')) || (mJi === '묘' && userAllJiNY.includes('자')))
+      adjNotes.push('자묘형(-4점)')
+    if (['오', '진', '유', '해'].includes(mJi) && userAllJiNY.includes(mJi))
+      adjNotes.push('자형(-3점)')
+    // 용신/기신 오행 체크
+    const ganElNY = GAN_EL_NY[mp[0]] || ''
+    const jiElNY = JI_EL_NY[mJi] || ''
+    if (ganElNY === yongshinShortNY || jiElNY === yongshinShortNY)
+      adjNotes.push('용신달(+8점)')
+    else if (ganElNY === heukshinShortNY || jiElNY === heukshinShortNY)
+      adjNotes.push('기신달(-8점)')
+    // 십이운성
+    const unsungNY = (SIPIU_NY[dayGanForSipseongNY] || {})[mJi] || '불명'
+    const markNY = unsungNY === '제왕' ? '★★★절정' : unsungNY === '임관' ? '★★상승' : ['장생', '관대'].includes(unsungNY) ? '★좋음' : ['묘', '절'].includes(unsungNY) ? '▼▼주의' : ['병', '사'].includes(unsungNY) ? '▼하향' : ''
     const adjStr = adjNotes.length > 0 ? ` [${adjNotes.join(' ')}]` : ''
-    return `  · ${m}월: ${mp}(${GAN_HANJA_NY[mp[0]] || ''}${JI_HANJA_NY[mp[1]] || ''}) 월간십성: ${sipseong}${adjStr}`
+    return `  · ${m}월: ${mp}(${GAN_HANJA_NY[mp[0]] || ''}${JI_HANJA_NY[mp[1]] || ''}) 월간십성: ${sipseong} 십이운성: ${unsungNY}${markNY ? `(${markNY})` : ''}${adjStr}`
   })
 
   // 대운(大運) 현황 사전 계산 (성별 있을 때만)

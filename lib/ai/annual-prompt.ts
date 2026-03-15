@@ -193,6 +193,17 @@ ${detail.specialRelations.length > 0 ? detail.specialRelations.map(r => `- ${r.t
     '자': '子', '축': '丑', '인': '寅', '묘': '卯', '진': '辰', '사': '巳',
     '오': '午', '미': '未', '신': '申', '유': '酉', '술': '戌', '해': '亥',
   }
+  // 용신/기신 오행 월별 사전 계산용 상수
+  const GAN_EL_A: Record<string, string> = {
+    '갑': '목', '을': '목', '병': '화', '정': '화', '무': '토',
+    '기': '토', '경': '금', '신': '금', '임': '수', '계': '수',
+  }
+  const JI_EL_A: Record<string, string> = {
+    '자': '수', '축': '토', '인': '목', '묘': '목', '진': '토', '사': '화',
+    '오': '화', '미': '토', '신': '금', '유': '금', '술': '토', '해': '수',
+  }
+  const yongshinForMonth = detail ? getYongshin(saju, detail) : null
+
   const dayGanForSipseong = saju.dayPillar[0]
   const userDayJiA = saju.dayPillar[1]
   const userYearJiA = saju.yearPillar[1]
@@ -238,6 +249,17 @@ ${detail.specialRelations.length > 0 ? detail.specialRelations.map(r => `- ${r.t
       adjParts.push('자묘형(-4점)')
     if (['오', '진', '유', '해'].includes(mJi) && allUserJiA.includes(mJi))
       adjParts.push('자형(-3점)')
+    // 용신/기신 오행 사전 계산 — fieldScores 조정 기준
+    if (yongshinForMonth) {
+      const ganElA = GAN_EL_A[mp[0]] || ''
+      const jiElA = JI_EL_A[mJi] || ''
+      const yongshinElA = yongshinForMonth.yongshin
+      const heukshinElA = yongshinForMonth.heukshin.split('(')[0]
+      if (ganElA === yongshinElA || jiElA === yongshinElA)
+        adjParts.push('용신달(+8점)')
+      else if (ganElA === heukshinElA || jiElA === heukshinElA)
+        adjParts.push('기신달(-8점)')
+    }
     const adjStr = adjParts.length > 0 ? ` [${adjParts.join(' ')}]` : ''
     return `  · ${m}월: ${mp}(${GAN_HANJA_A[mp[0]] || ''}${JI_HANJA_A[mp[1]] || ''}) 월간십성: ${sipseong}${adjStr}`
   })

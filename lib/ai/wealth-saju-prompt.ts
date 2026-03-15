@@ -112,7 +112,8 @@ export async function generateWealthSaju(
       daeunPillarsW.slice(0, 6).map(d => {
         const unsung = (SIPIU_W[dayGanW] || {})[d.pillar[1]] || '불명'
         const mark = unsung === '제왕' ? ' ★★★재물 절정' : unsung === '임관' ? ' ★★재물 상승' : ['장생','관대'].includes(unsung) ? ' ★좋음' : ['묘','절'].includes(unsung) ? ' ▼▼재물 정체' : ['병','사'].includes(unsung) ? ' ▼재물 하향' : ''
-        return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark}`
+        const ganSipseongW = getSipseong(dayGanW, d.pillar[0])
+        return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark} / 천간십성 ${ganSipseongW}`
       }).join('\n')
     : ''
 
@@ -134,7 +135,19 @@ export async function generateWealthSaju(
     ? `✅ 세운 지지(${seunJiW})↔일지(${dayJiW}): 합(合) — 올해 재물 안정·수입 기회, overallWealthScore 추가 +6점`
     : `세운 지지(${seunJiW})↔일지(${dayJiW}): 충합 없음 — 중립 기조`
 
-  // 현재 연도 12개월 월운 사전 계산 (각 달 20일 기준 월주 + 십성 + 십이운성)
+  // 용신/기신 오행 월별 사전 계산용 상수
+  const GAN_EL_W: Record<string, string> = {
+    '갑': '목', '을': '목', '병': '화', '정': '화', '무': '토',
+    '기': '토', '경': '금', '신': '금', '임': '수', '계': '수',
+  }
+  const JI_EL_W: Record<string, string> = {
+    '자': '수', '축': '토', '인': '목', '묘': '목', '진': '토', '사': '화',
+    '오': '화', '미': '토', '신': '금', '유': '금', '술': '토', '해': '수',
+  }
+  const yongshinShortW = yongshin.yongshin
+  const heukshinShortW = yongshin.heukshin.split('(')[0]
+
+  // 현재 연도 12개월 월운 사전 계산 (각 달 20일 기준 월주 + 십성 + 십이운성 + 용신/기신)
   const monthlyPillars = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1
     const s = calculateSaju(currentYear, m, 20)
@@ -142,7 +155,10 @@ export async function generateWealthSaju(
     const ji = s.monthPillar[1]
     const unsung = (SIPIU_W[dayGanW] || {})[ji] || '불명'
     const mark = unsung === '제왕' ? ' ★★★절정' : unsung === '임관' ? ' ★★상승' : ['장생', '관대'].includes(unsung) ? ' ★좋음' : ['묘', '절'].includes(unsung) ? ' ▼▼정체주의' : ['병', '사'].includes(unsung) ? ' ▼하향' : ''
-    return `${m}월: ${s.monthPillar}(${s.monthPillarHanja}) 월간십성: ${sipseong} / 십이운성: ${unsung}${mark}`
+    const ganElW = GAN_EL_W[s.monthPillar[0]] || ''
+    const jiElW = JI_EL_W[ji] || ''
+    const yongshinTag = (ganElW === yongshinShortW || jiElW === yongshinShortW) ? ' 🟢용신달(+8점)' : (ganElW === heukshinShortW || jiElW === heukshinShortW) ? ' 🔴기신달(-8점)' : ''
+    return `${m}월: ${s.monthPillar}(${s.monthPillarHanja}) 월간십성: ${sipseong} / 십이운성: ${unsung}${mark}${yongshinTag}`
   }).join('\n')
 
   // 십성별 분포 집계 (재성/식상/비겁/관성/인성)

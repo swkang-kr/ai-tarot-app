@@ -158,7 +158,8 @@ ${(() => {
     const ji = d.pillar[1]
     const unsung = (SIPIU_DS[dayGan] || {})[ji] || '불명'
     const mark = unsung === '제왕' ? ' ★★★절정운(rating+2)' : unsung === '임관' ? ' ★★상승운(rating+1)' : ['장생', '관대'].includes(unsung) ? ' ★호운(rating+0~+1)' : unsung === '쇠' ? ' △소강(중립)' : ['묘', '절'].includes(unsung) ? ' ▼▼정체·주의(rating-2)' : ['병', '사'].includes(unsung) ? ' ▼하향주의(rating-1)' : ''
-    return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark}`
+    const ganSipseong = getSipseong(dayGan, d.pillar[0])
+    return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark} / 천간십성 ${ganSipseong}`
   }).join('\n')
 })()}
 
