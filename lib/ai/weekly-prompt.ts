@@ -43,6 +43,13 @@ const SAMHAP_GROUPS: [string, string, string][] = [
   ['해', '묘', '미'],
   ['사', '유', '축'],
 ]
+// 방합(方合) — 동방(인묘진/木)·남방(사오미/火)·서방(신유술/金)·북방(해자축/水)
+const BANGHAP_GROUPS: [string, string, string][] = [
+  ['인', '묘', '진'],
+  ['사', '오', '미'],
+  ['신', '유', '술'],
+  ['해', '자', '축'],
+]
 
 const SYSTEM_PROMPT = `당신은 20년 경력의 사주팔자 전문가입니다. 사용자의 이번 주 운세를 분석해주세요.
 
@@ -240,6 +247,26 @@ export async function generateWeeklyReading(
     ? `\n삼합·반합 사전 계산:\n${samhapAdjNotes.join('\n')}`
     : ''
 
+  // 방합(方合)/반방합 사전 계산 — 동/남/서/북 방위별 오행 기운 결집
+  const banghapAdjNotes = weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const dayJi = s.dayPillar[1]
+    for (const group of BANGHAP_GROUPS) {
+      if (!group.includes(dayJi)) continue
+      const userMatches = group.filter(ji => ji !== dayJi && userJiList.includes(ji))
+      if (userMatches.length === 2) {
+        return `  · ${dayNames[i]}요일: 방합(方合) 완성 — 일진 ${dayJi} + 사주 ${userMatches.join('·')} → 방위 오행 기운 집결, 추가 +6점`
+      } else if (userMatches.length === 1) {
+        return `  · ${dayNames[i]}요일: 반방합(半方合) — 일진 ${dayJi}↔사주 ${userMatches[0]} 방합 부분 → 추가 +3점`
+      }
+    }
+    return null
+  }).filter(Boolean)
+  const banghapAdjNote = banghapAdjNotes.length > 0
+    ? `\n방합·반방합 사전 계산:\n${banghapAdjNotes.join('\n')}`
+    : ''
+
   // 사용자 시지(時支)와 일진 지지의 충합 사전 계산
   const userHourJi = saju.hourPillar ? saju.hourPillar[1] : null
   let hourAdjNote = ''
@@ -372,8 +399,10 @@ ${weekDates.map((d, i) => `- ${dayNames[i]}요일 (${d}): 일진 ${dayIljin[i]}`
 - 시지합(時支合): 사용자 시지와 일진 지지가 합이면 추가 +2점 (세부 활동 기운 강화)
 - 삼합(三合): 일진 지지 + 사주 지지 2개가 삼합 그룹(인오술·신자진·해묘미·사유축) 완성이면 추가 +7점
 - 반합(半合): 일진 지지 + 사주 지지 1개가 삼합 그룹 내 2개 구성이면 추가 +3점
+- 방합(方合): 일진 지지 + 사주 지지 2개가 방합 그룹(인묘진·사오미·신유술·해자축) 완성이면 추가 +6점
+- 반방합(半方合): 일진 지지 + 사주 지지 1개가 방합 그룹 내 2개 구성이면 추가 +3점
 - 공망일(空亡日): 일진 지지가 사용자 공망과 일치하면 추가 -5점 (기대·계획 변수)
-- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${gongmangNote}${samhapAdjNote}${hyeongNote}${yongshinAdjNote}`
+- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${gongmangNote}${samhapAdjNote}${banghapAdjNote}${hyeongNote}${yongshinAdjNote}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

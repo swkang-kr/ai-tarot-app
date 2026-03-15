@@ -142,8 +142,22 @@ export async function generateManseryeok(
   const CHUNG_M: [string, string][] = [['자','오'],['축','미'],['인','신'],['묘','유'],['진','술'],['사','해']]
   const YUKHAP_M: [string, string][] = [['자','축'],['인','해'],['묘','술'],['진','유'],['사','신'],['오','미']]
   const dayJiM = saju.dayPillar[1]
+  // 오행 매핑 — 용신/기신 오행 체크용
+  const GAN_EL_M: Record<string, string> = {
+    '갑': '목', '을': '목', '병': '화', '정': '화', '무': '토',
+    '기': '토', '경': '금', '신': '금', '임': '수', '계': '수',
+  }
+  const JI_EL_M: Record<string, string> = {
+    '자': '수', '축': '토', '인': '목', '묘': '목', '진': '토', '사': '화',
+    '오': '화', '미': '토', '신': '금', '유': '금', '술': '토', '해': '수',
+  }
+  const yongshinShortM = yongshin?.yongshin || ''
+  const heukshinShortM = yongshin?.heukshin.split('(')[0] || ''
+  // 형(刑) 사전 계산용 사용자 지지 목록
+  const allUserJiM = [saju.yearPillar[1], saju.monthPillar[1], saju.dayPillar[1], ...(saju.hourPillar ? [saju.hourPillar[1]] : [])]
+  const SAMHYEONG_M: string[][] = [['인', '신', '사'], ['축', '술', '미']]
 
-  // targetYear 12개월 월운 간지 + 월지↔일지 충합 사전 계산 (AI 역법 계산 오류 방지)
+  // targetYear 12개월 월운 간지 + 월지↔일지 충합·용신오행·형(刑) 사전 계산 (AI 역법/오행 판단 오류 방지)
   const monthlyPillarsM = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1
     const ms = calculateSaju(targetYear, m, 20)
@@ -151,6 +165,23 @@ export async function generateManseryeok(
     const adjNotes: string[] = []
     if (CHUNG_M.some(([a,b]) => (mJi===a&&dayJiM===b)||(mJi===b&&dayJiM===a))) adjNotes.push('일지충(-8점)')
     if (YUKHAP_M.some(([a,b]) => (mJi===a&&dayJiM===b)||(mJi===b&&dayJiM===a))) adjNotes.push('일지합(+6점)')
+    // 용신/기신 오행 체크 — annual/career/wealth와 동일 기준
+    if (yongshinShortM) {
+      const ganElM = GAN_EL_M[ms.monthPillar[0]] || ''
+      const jiElM = JI_EL_M[mJi] || ''
+      if (ganElM === yongshinShortM || jiElM === yongshinShortM) adjNotes.push('용신달(+8점)')
+      else if (ganElM === heukshinShortM || jiElM === heukshinShortM) adjNotes.push('기신달(-8점)')
+    }
+    // 형(刑) 체크 — 삼형/자묘형/자형
+    for (const group of SAMHYEONG_M) {
+      if (group.includes(mJi)) {
+        const matchCount = group.filter(ji => ji !== mJi && allUserJiM.includes(ji)).length
+        if (matchCount >= 2) { adjNotes.push('삼형완성(-8점)'); break }
+        if (matchCount === 1) { adjNotes.push('부분형(-4점)'); break }
+      }
+    }
+    if ((mJi === '자' && allUserJiM.includes('묘')) || (mJi === '묘' && allUserJiM.includes('자'))) adjNotes.push('자묘형(-4점)')
+    if (['오', '진', '유', '해'].includes(mJi) && allUserJiM.includes(mJi)) adjNotes.push('자형(-3점)')
     const adjStr = adjNotes.length > 0 ? ` [${adjNotes.join(' ')}]` : ''
     return `  · ${m}월: ${ms.monthPillar}(${ms.monthPillarHanja})${adjStr}`
   })
@@ -220,7 +251,8 @@ ${daeunPillars.slice(0, 6).map(d => {
   const ji = d.pillar[1]
   const unsung = (SIPIU[dayGan] || {})[ji] || '불명'
   const mark = unsung === '제왕' ? ' ★★★절정운' : unsung === '임관' ? ' ★★상승운' : ['장생', '관대'].includes(unsung) ? ' ★좋음' : unsung === '쇠' ? ' △소강' : ['묘', '절'].includes(unsung) ? ' ▼▼정체주의' : ['병', '사'].includes(unsung) ? ' ▼하향주의' : ''
-  return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark}`
+  const ganSipseongM = getSipseong(dayGan, d.pillar[0])
+  return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark} / 천간십성 ${ganSipseongM}`
 }).join('\n')}` : ''}`
 
   const message = await anthropic.messages.create({

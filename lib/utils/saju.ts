@@ -1010,6 +1010,20 @@ export function getCrossCompatibilityRelations(saju1: SajuInfo, saju2: SajuInfo)
     }
   }
 
+  // 연지 충(冲) — 두 사람 연지 간 충돌 (근본 기운·인생관 충돌)
+  for (const [a, b, meaning] of YUKCHUNG) {
+    if ((yji1 === a && yji2 === b) || (yji1 === b && yji2 === a)) {
+      notes.push(`연지 충(冲): ${yji1}↔${yji2} — ${meaning} (두 사람 근본 기운 충돌, 인생관 갈등 요인)`)
+    }
+  }
+
+  // 연지 합(合) — 두 사람 연지 간 육합 (근본 기운 조화)
+  for (const [a, b, meaning] of YUKHAP) {
+    if ((yji1 === a && yji2 === b) || (yji1 === b && yji2 === a)) {
+      notes.push(`연지 합(合): ${yji1}↔${yji2} — ${meaning} (두 사람 근본 기운 조화, 인생관 일치)`)
+    }
+  }
+
   // 원진살(怨嗔煞) — 일지·년지 간 원진 체크
   // 원진: 서로 질리고 원망하는 기운, 장기 관계에서 감정 소모·갈등 유발
   const checkWonjin = (jiA: string, jiB: string, label: string) => {
