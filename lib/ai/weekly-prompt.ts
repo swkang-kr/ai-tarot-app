@@ -263,6 +263,40 @@ export async function generateWeeklyReading(
       : ''
   }
 
+  // 형(刑) 관계 사전 계산 — 삼형(寅申巳 / 丑戌未), 자묘 무례지형, 자형(午辰酉亥)
+  const SAMHYEONG_GROUPS_W: string[][] = [['인', '신', '사'], ['축', '술', '미']]
+  const JAHYEONG_W = new Set(['오', '진', '유', '해'])
+  const JAMYO_W: [string, string] = ['자', '묘']
+  const hyeongNotes = weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const dayJi = s.dayPillar[1]
+    const allUserJi = [
+      saju.yearPillar[1], saju.monthPillar[1], saju.dayPillar[1],
+      ...(saju.hourPillar ? [saju.hourPillar[1]] : []),
+    ]
+    // 삼형 체크: 일진 지지가 삼형 그룹에 속하고 사주에 같은 그룹 지지가 있는지
+    for (const group of SAMHYEONG_GROUPS_W) {
+      if (!group.includes(dayJi)) continue
+      const matchCount = group.filter(ji => ji !== dayJi && allUserJi.includes(ji)).length
+      if (matchCount >= 2) return `  · ${dayNames[i]}요일: 삼형(三刑) 완성 — 일진 ${dayJi} + 사주 내 ${group.filter(j => j !== dayJi).join('·')} → 갈등·사고·충동 최대 주의, 추가 -8점`
+      if (matchCount === 1) {
+        const matched = group.find(ji => ji !== dayJi && allUserJi.includes(ji))
+        return `  · ${dayNames[i]}요일: 부분형(刑) — 일진 ${dayJi}↔사주 ${matched} 형 관계 → 주의 필요, 추가 -4점`
+      }
+    }
+    // 자묘 무례지형: 자(子)↔묘(卯)
+    const isJaMyo = (dayJi === JAMYO_W[0] && allUserJi.includes(JAMYO_W[1])) ||
+                    (dayJi === JAMYO_W[1] && allUserJi.includes(JAMYO_W[0]))
+    if (isJaMyo) return `  · ${dayNames[i]}요일: 자묘형(子卯刑) — 무례지형, 대인관계 갈등 주의, 추가 -4점`
+    // 자형(自刑): 일진 지지가 자형 지지이고 사주에도 같은 지지가 있을 때
+    if (JAHYEONG_W.has(dayJi) && allUserJi.includes(dayJi)) return `  · ${dayNames[i]}요일: 자형(自刑) — 일진·사주 ${dayJi} 중복, 자기 소모·과잉 에너지 주의, 추가 -3점`
+    return null
+  }).filter(Boolean)
+  const hyeongNote = hyeongNotes.length > 0
+    ? `\n형(刑) 관계 사전 계산:\n${hyeongNotes.join('\n')}`
+    : ''
+
   // 공망일(空亡日) 사전 계산
   const gongmangJiList = detail.gongmangPillars?.map((p: { ji: string }) => p.ji) || []
   const gongmangNotes = weekDates.map((dateStr, i) => {
@@ -308,7 +342,8 @@ ${weekDates.map((d, i) => `- ${dayNames[i]}요일 (${d}): 일진 ${dayIljin[i]}`
 - 시지합(時支合): 사용자 시지와 일진 지지가 합이면 추가 +2점 (세부 활동 기운 강화)
 - 삼합(三合): 일진 지지 + 사주 지지 2개가 삼합 그룹(인오술·신자진·해묘미·사유축) 완성이면 추가 +7점
 - 반합(半合): 일진 지지 + 사주 지지 1개가 삼합 그룹 내 2개 구성이면 추가 +3점
-- 공망일(空亡日): 일진 지지가 사용자 공망과 일치하면 추가 -5점 (기대·계획 변수)${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${gongmangNote}${samhapAdjNote}`
+- 공망일(空亡日): 일진 지지가 사용자 공망과 일치하면 추가 -5점 (기대·계획 변수)
+- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${gongmangNote}${samhapAdjNote}${hyeongNote}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
