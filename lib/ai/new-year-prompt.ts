@@ -211,6 +211,12 @@ export async function generateNewYearReading(
         CHUNG_PAIRS_NY.some(([a, b]) => (mJi === a && gji === b) || (mJi === b && gji === a))
       )
       if (resolvesNY.length > 0) adjNotes.push('공망해소(+3점)')
+      else {
+        const hapResolvesNY = gongmangJiListNY.filter((gji: string) =>
+          YUKHAP_PAIRS_NY.some(([a, b]) => (mJi === a && gji === b) || (mJi === b && gji === a))
+        )
+        if (hapResolvesNY.length > 0) adjNotes.push('공망합해소(+2점)')
+      }
     }
     // 용신/기신 오행 체크
     const ganElNY = GAN_EL_NY[mp[0]] || ''
@@ -309,7 +315,8 @@ ${monthPillarsNY.join('\n')}
 - [천간합] 표시된 달: score에 추가 +5점 적용
 - [천간충] 표시된 달: score에서 추가 -8점 적용
 - [공망달] 표시된 달: score에서 추가 -5점 적용
-- [공망해소] 표시된 달: score에 추가 +3점 적용${seunDaeunCrossNY}
+- [공망해소] 표시된 달: score에 추가 +3점 적용
+- [공망합해소] 표시된 달: score에 추가 +2점 적용${seunDaeunCrossNY}
 
 삼재(三災): ${samjaeNY.isSamjae ? `⚠️ ${samjaeNY.type} — ${samjaeNY.description}` : '해당 없음'}${samjaeNY.isSamjae ? `
 - 삼재 해당: yearSummary·annualAdvice·monthHighlights에 반드시 반영하세요

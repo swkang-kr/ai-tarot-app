@@ -1,7 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getDetailedAnalysis, getYongshin, getSamjae, getYearJi, getSipiuUnsung } from '@/lib/utils/saju'
+import { getDetailedAnalysis, getYongshin, getSamjae, getYearJi, getSipiuUnsung, getSipseong } from '@/lib/utils/saju'
 
 const GAN_HANJA: Record<string, string> = {
   '갑': '甲', '을': '乙', '병': '丙', '정': '丁', '무': '戊',
@@ -326,6 +326,37 @@ export async function generateWeeklyReading(
     ? `\n형(刑) 관계 사전 계산:\n${hyeongNotes.join('\n')}`
     : ''
 
+  // 해(害)·파(破) 일진 사전 계산 — 일진 지지와 사주 지지 간 육해/육파 관계
+  const YUKHAE_W: [string, string][] = [
+    ['자', '미'], ['축', '오'], ['인', '사'], ['묘', '진'], ['신', '해'], ['유', '술'],
+  ]
+  const YUKPA_W: [string, string][] = [
+    ['자', '유'], ['축', '진'], ['인', '해'], ['묘', '오'], ['사', '신'], ['술', '미'],
+  ]
+  const allUserJiForHaeW = [
+    saju.yearPillar[1], saju.monthPillar[1], saju.dayPillar[1],
+    ...(saju.hourPillar ? [saju.hourPillar[1]] : []),
+  ]
+  const haePaNotes = weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const dayJi = s.dayPillar[1]
+    const parts: string[] = []
+    const haeMatches = allUserJiForHaeW.filter(uji =>
+      YUKHAE_W.some(([a, b]) => (dayJi === a && uji === b) || (dayJi === b && uji === a))
+    )
+    const paMatches = allUserJiForHaeW.filter(uji =>
+      YUKPA_W.some(([a, b]) => (dayJi === a && uji === b) || (dayJi === b && uji === a))
+    )
+    if (haeMatches.length > 0) parts.push(`해(害) — 일진 ${dayJi}↔사주 ${haeMatches.join('·')} 육해 → 추가 -4점`)
+    if (paMatches.length > 0) parts.push(`파(破) — 일진 ${dayJi}↔사주 ${paMatches.join('·')} 육파 → 추가 -3점`)
+    if (parts.length === 0) return null
+    return `  · ${dayNames[i]}요일: ${parts.join(' / ')}`
+  }).filter(Boolean)
+  const haePaNote = haePaNotes.length > 0
+    ? `\n해(害)·파(破) 일진 사전 계산:\n${haePaNotes.join('\n')}`
+    : ''
+
   // 용신/기신 일진 오행 사전 계산 — AI 오행 판단 오류 방지
   const GAN_EL_WY: Record<string, string> = {
     '갑': '목', '을': '목', '병': '화', '정': '화', '무': '토',
@@ -354,6 +385,35 @@ export async function generateWeeklyReading(
   }).filter(Boolean)
   const yongshinAdjNote = yongshinAdjNotes.length > 0
     ? `\n용신/기신 일진 오행 사전 계산:\n${yongshinAdjNotes.join('\n')}`
+    : ''
+
+  // 일진 천간 십성(十星) 사전 계산 — 신강/신약별 억부론 가중치
+  const daySipseongNotes = bodyStrength && bodyStrength !== '종격(從格)' ? weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const dayGan = s.dayPillar[0]
+    const sipseong = getSipseong(saju.dayPillar[0], dayGan)
+    let pts: string | null = null
+    if (bodyStrength === '신강(身强)') {
+      if (['편관', '정관'].includes(sipseong)) pts = '+4'
+      else if (['편재', '정재'].includes(sipseong)) pts = '+3'
+      else if (['식신', '상관'].includes(sipseong)) pts = '+2'
+      else if (['편인', '정인'].includes(sipseong)) pts = '-3'
+    } else if (bodyStrength === '신약(身弱)') {
+      if (['편인', '정인'].includes(sipseong)) pts = '+4'
+      else if (['비견', '겁재'].includes(sipseong)) pts = '+2'
+      else if (['편관', '정관'].includes(sipseong)) pts = '-3'
+      else if (['편재', '정재'].includes(sipseong)) pts = '-2'
+    } else {
+      // 중화 사주
+      if (['편인', '정인'].includes(sipseong)) pts = '+2'
+      else if (['편관', '정관'].includes(sipseong)) pts = '+1'
+    }
+    if (!pts) return null
+    return `  · ${dayNames[i]}요일: 일진 천간 ${dayGan} → 십성 ${sipseong} (${bodyStrength} 기준) → 추가 ${pts}점`
+  }).filter(Boolean) : []
+  const daySipseongNote = daySipseongNotes.length > 0
+    ? `\n[일진 천간 십성 사전 계산]\n${daySipseongNotes.join('\n')}`
     : ''
 
   // 공망일(空亡日) 사전 계산 + 공망 해소(空亡解消) 체크
@@ -500,10 +560,13 @@ ${weekDates.map((d, i) => `- ${dayNames[i]}요일 (${d}): 일진 ${dayIljin[i]}`
 - 방합(方合): 일진 지지 + 사주 지지 2개가 방합 그룹(인묘진·사오미·신유술·해자축) 완성이면 추가 +6점
 - 반방합(半方合): 일진 지지 + 사주 지지 1개가 방합 그룹 내 2개 구성이면 추가 +3점
 - 공망일(空亡日): 일진 지지가 사용자 공망과 일치하면 추가 -5점 (기대·계획 변수)
-- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${interDayChungNote}${gongmangNote}${samhapAdjNote}${banghapAdjNote}${hyeongNote}
+- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${interDayChungNote}${gongmangNote}${samhapAdjNote}${banghapAdjNote}${hyeongNote}${haePaNote}
+- 해(害): 일진 지지와 사주 지지(년/월/일/시지)가 육해 관계이면 추가 -4점 → 아래 사전 계산값 참조
+- 파(破): 일진 지지와 사주 지지(년/월/일/시지)가 육파 관계이면 추가 -3점 → 아래 사전 계산값 참조
 - 공망 합해소(空亡解消): 일진 지지가 공망 지지와 육합이면 추가 +2점 (공망 기운 완화)
 - 십이운성: 제왕일 +3점, 임관일 +2점, 장생·관대일 +1점, 절일 -4점, 사일 -3점, 묘·병일 -2점 → 아래 사전 계산값 참조
-- 신살 일진 교차: 도화살 보유+도화일(자오묘유) +4점, 역마살 보유+역마일(인신사해) +3점 → 아래 사전 계산값 참조${yongshinAdjNote}${sipiuNote}${sinsalCrossNote}${samjaeWeekNote}`
+- 일진 천간 십성(十星): 신강→편관/정관 +4점·재성 +3점·식상 +2점·인성 -3점; 신약→인성 +4점·비겁 +2점·관성 -3점·재성 -2점 → 아래 사전 계산값 참조
+- 신살 일진 교차: 도화살 보유+도화일(자오묘유) +4점, 역마살 보유+역마일(인신사해) +3점 → 아래 사전 계산값 참조${yongshinAdjNote}${sipiuNote}${sinsalCrossNote}${daySipseongNote}${samjaeWeekNote}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

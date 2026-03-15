@@ -286,6 +286,12 @@ ${detail.specialRelations.length > 0 ? detail.specialRelations.map(r => `- ${r.t
         CHUNG_PAIRS_A.some(([a, b]) => (mJi === a && gji === b) || (mJi === b && gji === a))
       )
       if (resolvesA.length > 0) adjParts.push('공망해소(+3점)')
+      else {
+        const hapResolvesA = gongmangJiListA.filter((gji: string) =>
+          YUKHAP_PAIRS_A.some(([a, b]) => (mJi === a && gji === b) || (mJi === b && gji === a))
+        )
+        if (hapResolvesA.length > 0) adjParts.push('공망합해소(+2점)')
+      }
     }
     // 용신/기신 오행 사전 계산 — fieldScores 조정 기준
     if (yongshinForMonth) {

@@ -1397,6 +1397,14 @@ export function getYongshin(saju: SajuInfo, detail: SajuDetailedAnalysis): Yongs
     reason = `조후론 보조: 가을(酉月) 금기 절정, 신약 목(木) — 수(水) 인성으로 보강`
   }
   // 구신(仇神): 기신(忌神)을 생하는 오행 — 간접적으로 해를 끼침
+  // 겨울(해자축월) 목(木) 일간: 수다목부(水多木浮) — 수 과다로 목이 떠내려가는 현상
+  //   신약 목 일간은 이미 수(水)가 넘쳐서 인성(水)을 더하면 역효과
+  //   화(火) 온기로 목기(木氣) 활성화 필요
+  if (WINTER_JI.has(monthJi) && dayShort === '목' && bodyStrength === '신약(身弱)') {
+    yongshinShort = '화'
+    heukshinShort = '수'
+    reason = `조후론 보조: 겨울(水月) 신약 목(木) — 수다목부(水多木浮), 화(火)로 목기 활성화`
+  }
   const boekshinShort = Object.entries(SANGSAENG).find(([, v]) => v === heukshinShort)?.[0] || ''
   // 희신(喜神): 용신을 생하는 오행 — 간접적으로 용신을 도움
   const heungshinShort = Object.entries(SANGSAENG).find(([, v]) => v === yongshinShort)?.[0] || ''
