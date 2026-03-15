@@ -17,8 +17,10 @@ const RELATIONSHIP_TYPES = [
 export default function CompatibilityPage() {
   const [person1Date, setPerson1Date] = useState<Date | null>(null)
   const [person1Hour, setPerson1Hour] = useState<number | null>(null)
+  const [person1Gender, setPerson1Gender] = useState<'male' | 'female' | null>(null)
   const [person2Date, setPerson2Date] = useState<Date | null>(null)
   const [person2Hour, setPerson2Hour] = useState<number | null>(null)
+  const [person2Gender, setPerson2Gender] = useState<'male' | 'female' | null>(null)
   const [relationshipType, setRelationshipType] = useState('lover')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,8 +42,10 @@ export default function CompatibilityPage() {
         body: JSON.stringify({
           person1BirthDate: person1Date.toISOString().split('T')[0],
           person1BirthHour: person1Hour,
+          person1Gender,
           person2BirthDate: person2Date.toISOString().split('T')[0],
           person2BirthHour: person2Hour,
+          person2Gender,
           relationshipType,
         }),
       })
@@ -118,9 +122,25 @@ export default function CompatibilityPage() {
               <div className="mb-4">
                 <label className="block text-white mb-2 text-sm font-medium">나의 생년월일</label>
                 <DatePicker selected={person1Date} onChange={setPerson1Date} maxDate={new Date()} className="w-full" />
-                <div className="mt-2">
-                  <label className="block text-white/60 mb-1 text-xs">태어난 시간 (선택)</label>
-                  <BirthTimeSelect value={person1Hour} onChange={setPerson1Hour} />
+                <div className="mt-2 flex gap-2">
+                  <div className="flex-1">
+                    <label className="block text-white/60 mb-1 text-xs">태어난 시간 (선택)</label>
+                    <BirthTimeSelect value={person1Hour} onChange={setPerson1Hour} />
+                  </div>
+                  <div className="flex-shrink-0">
+                    <label className="block text-white/60 mb-1 text-xs">성별 (선택)</label>
+                    <div className="flex gap-1">
+                      {(['male', 'female'] as const).map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => setPerson1Gender(person1Gender === g ? null : g)}
+                          className={`px-3 py-2.5 rounded-xl text-sm border transition ${person1Gender === g ? 'bg-purple-500/40 border-purple-400/60 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}`}
+                        >
+                          {g === 'male' ? '♂ 남' : '♀ 여'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -128,9 +148,25 @@ export default function CompatibilityPage() {
               <div className="mb-4">
                 <label className="block text-white mb-2 text-sm font-medium">상대의 생년월일</label>
                 <DatePicker selected={person2Date} onChange={setPerson2Date} maxDate={new Date()} className="w-full" />
-                <div className="mt-2">
-                  <label className="block text-white/60 mb-1 text-xs">태어난 시간 (선택)</label>
-                  <BirthTimeSelect value={person2Hour} onChange={setPerson2Hour} />
+                <div className="mt-2 flex gap-2">
+                  <div className="flex-1">
+                    <label className="block text-white/60 mb-1 text-xs">태어난 시간 (선택)</label>
+                    <BirthTimeSelect value={person2Hour} onChange={setPerson2Hour} />
+                  </div>
+                  <div className="flex-shrink-0">
+                    <label className="block text-white/60 mb-1 text-xs">성별 (선택)</label>
+                    <div className="flex gap-1">
+                      {(['male', 'female'] as const).map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => setPerson2Gender(person2Gender === g ? null : g)}
+                          className={`px-3 py-2.5 rounded-xl text-sm border transition ${person2Gender === g ? 'bg-pink-500/40 border-pink-400/60 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}`}
+                        >
+                          {g === 'male' ? '♂ 남' : '♀ 여'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 

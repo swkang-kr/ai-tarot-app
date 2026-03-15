@@ -1,6 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
-import { calculateDaeunStartAge, calculateDaeunPillars, getYongshin } from '@/lib/utils/saju'
+import { calculateDaeunStartAge, calculateDaeunPillars, getYongshin, getSipseong } from '@/lib/utils/saju'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 
 export interface ManseryeokResponse {
@@ -133,6 +133,28 @@ export async function generateManseryeok(
   // 용신 사전 계산 (detail이 있을 때만)
   const yongshin = detail ? getYongshin(saju, detail) : null
 
+  // 세운(歲運) 간지 사전 계산 (currentSeun.ganji AI 역법 오류 방지)
+  const seunCalcM = calculateSaju(targetYear, 6, 15)
+  const seunPillarM = seunCalcM.yearPillar
+  const seunPillarHanjaM = seunCalcM.yearPillarHanja
+
+  // 월운 충합 사전 계산용 상수
+  const CHUNG_M: [string, string][] = [['자','오'],['축','미'],['인','신'],['묘','유'],['진','술'],['사','해']]
+  const YUKHAP_M: [string, string][] = [['자','축'],['인','해'],['묘','술'],['진','유'],['사','신'],['오','미']]
+  const dayJiM = saju.dayPillar[1]
+
+  // targetYear 12개월 월운 간지 + 월지↔일지 충합 사전 계산 (AI 역법 계산 오류 방지)
+  const monthlyPillarsM = Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1
+    const ms = calculateSaju(targetYear, m, 20)
+    const mJi = ms.monthPillar[1]
+    const adjNotes: string[] = []
+    if (CHUNG_M.some(([a,b]) => (mJi===a&&dayJiM===b)||(mJi===b&&dayJiM===a))) adjNotes.push('일지충(-8점)')
+    if (YUKHAP_M.some(([a,b]) => (mJi===a&&dayJiM===b)||(mJi===b&&dayJiM===a))) adjNotes.push('일지합(+6점)')
+    const adjStr = adjNotes.length > 0 ? ` [${adjNotes.join(' ')}]` : ''
+    return `  · ${m}월: ${ms.monthPillar}(${ms.monthPillarHanja})${adjStr}`
+  })
+
   const userPrompt = `${birthDate}생 (현재 ${currentAge}세, ${genderNote}) 사용자의 만세력을 분석해주세요.
 
 사주팔자:
@@ -150,8 +172,18 @@ ${daeunPillars.map(d => `  · ${d.age}세 대운: ${d.pillar}(${d.hanja})`).join
 분석 요청:
 1. 현재 대운 및 다음 대운 (10년 주기) — 위 실제 대운 간지를 사용, 일간 오행과 대운 간지의 상호작용 분석
    ※ 대운 의미 필드에 천간기(前5年)와 지지기(後5年)를 구분하여 서술하세요
-2. ${targetYear}년 세운 (年運) — 올해의 흐름과 핵심 테마
-3. ${targetYear}년 월운 (月運) — 12개월 흐름
+2. ${targetYear}년 세운 (年運): ${seunPillarM}(${seunPillarHanjaM}) — currentSeun.ganji는 반드시 "${seunPillarM}"으로 설정하세요.
+   세운 천간 십성: 일간 ${saju.dayPillar[0]} 기준 세운 천간 ${seunPillarM[0]}는 → ${getSipseong(saju.dayPillar[0], seunPillarM[0])}
+   (세운 십성 의미: 편재년=재물기회·변화·대인운, 정관년=안정·승진·명예, 편관년=도전·압박·변화, 식신년=결실·여유·건강, 인성년=학문·귀인·내실)
+   세운 지지 ${seunPillarM[1]}와 일지 ${saju.dayPillar[1]}의 충합 관계를 분석하여 올해 핵심 테마와 advice를 서술하세요.
+3. ${targetYear}년 월운 (月運) — 아래 사전 계산된 월운 간지를 그대로 monthlyFlow.ganji에 사용하세요:
+${monthlyPillarsM.join('\n')}
+${yongshin ? `[월운 score 산정 기준 — 용신/기신 오행 + 충합 반영]
+- 월운 천간·지지 오행이 용신(${yongshin.yongshin}) 오행이면 해당 달 score +5~10 상향
+- 월운 천간·지지 오행이 기신(${yongshin.heukshin}) 오행이면 해당 달 score -5~10 하향
+- [일지충] 표시된 달: score 추가 -8점 적용
+- [일지합] 표시된 달: score 추가 +6점 적용
+- 대운 천간기(前5年)는 천간 영향 강, 지지기(後5年)는 지지 영향 강` : ''}
 4. 전 생애 대운 타임라인 (10대~60대+)
 
 대운 계산 기준:
@@ -187,7 +219,7 @@ ${daeunPillars.slice(0, 6).map(d => {
   const dayGan = detail.dayMaster.name[0]
   const ji = d.pillar[1]
   const unsung = (SIPIU[dayGan] || {})[ji] || '불명'
-  const mark = ['제왕', '임관'].includes(unsung) ? ' ★강운' : ['묘', '절', '병', '사'].includes(unsung) ? ' ▼주의' : ''
+  const mark = unsung === '제왕' ? ' ★★★절정운' : unsung === '임관' ? ' ★★상승운' : ['장생', '관대'].includes(unsung) ? ' ★좋음' : unsung === '쇠' ? ' △소강' : ['묘', '절'].includes(unsung) ? ' ▼▼정체주의' : ['병', '사'].includes(unsung) ? ' ▼하향주의' : ''
   return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark}`
 }).join('\n')}` : ''}`
 

@@ -36,6 +36,13 @@ const CHEONGAN_HAP_PAIRS: [string, string][] = [
 const CHEONGAN_CHUNG_PAIRS: [string, string][] = [
   ['갑', '경'], ['을', '신'], ['병', '임'], ['정', '계'],
 ]
+// 삼합(三合) — 인오술(火)·신자진(水)·해묘미(木)·사유축(金)
+const SAMHAP_GROUPS: [string, string, string][] = [
+  ['인', '오', '술'],
+  ['신', '자', '진'],
+  ['해', '묘', '미'],
+  ['사', '유', '축'],
+]
 
 const SYSTEM_PROMPT = `당신은 20년 경력의 사주팔자 전문가입니다. 사용자의 이번 주 운세를 분석해주세요.
 
@@ -89,7 +96,7 @@ export async function generateWeeklyReading(
 
   // 신강/신약에 따라 비견일 기준점 동적 설정
   const begyeonBaseScore = bodyStrength === '신강(身强)' ? 50
-    : bodyStrength === '신약(身弱)' ? 70 : 60
+    : bodyStrength === '신약(身弱)' ? 70 : 65
 
   // 신강/신약별 십성 점수 기준 — 전통 명리학 억부론(抑扶論) 기반
   // 신강(身强): 설기·제압(食傷·財星·官星)이 좋고, 인성(더 강해짐)이 나쁨
@@ -99,9 +106,9 @@ export async function generateWeeklyReading(
     bodyStrengthNote = `
 - 사용자 신강/신약: ${bodyStrength} → 억부론 적용 (설기·제압이 좋음)
   · 비견일(比肩日): 기준 ${begyeonBaseScore}점 (비겁 과잉으로 부담)
-  · 食傷일(식상, 내가 생하는 오행=설기): 70점대 → 좋음
-  · 財星일(재성, 내가 극하는 오행): 62점대 → 보통~좋음
-  · 官星일(관성, 나를 극하는 오행): 60점대 → 보통~좋음 (신강 제압)
+  · 官星일(관성, 나를 극하는 오행): 75점대 → 매우 좋음 (신강 제압 1순위 용신)
+  · 財星일(재성, 내가 극하는 오행): 68점대 → 좋음 (설기·소모 2순위)
+  · 食傷일(식상, 내가 생하는 오행): 62점대 → 보통~좋음 (설기 3순위)
   · 印星일(인성, 나를 생하는 오행): 35점대 → 나쁨 (신강에게 인성 = 과잉·역효과)`
   } else if (bodyStrength === '신약(身弱)') {
     bodyStrengthNote = `
@@ -111,13 +118,19 @@ export async function generateWeeklyReading(
   · 食傷일(식상, 내가 생하는 오행): 50점대 → 나쁨 (설기로 더 약해짐)
   · 財星일(재성, 내가 극하는 오행): 55점대 → 나쁨 (신약에게 재성 부담)
   · 官星일(관성, 나를 극하는 오행): 48점대 → 나쁨 (신약에게 관성 부담)`
+  } else if (bodyStrength === '종격(從格)') {
+    bodyStrengthNote = `
+- 사용자 신강/신약: ${bodyStrength} → 억부론 배제, 용신 오행에 순종
+  · 용신(${yongshin.yongshinFull}) 오행 일진: 적극 활용 (추가 +10점 권장)
+  · 기신(${yongshin.heukshin}) 오행 일진: 역운 (추가 -10점 권장)
+  · 비견·인성 관계 무시, 오직 용신/기신 오행 기준으로만 판단`
   } else {
     bodyStrengthNote = bodyStrength
       ? `
 - 사용자 신강/신약: ${bodyStrength} (중화) → 균형 기준
   · 비견일(比肩日): 기준 ${begyeonBaseScore}점
-  · 印星일(인성): 75점대 → 좋음
-  · 食傷일(식상): 70점대 → 좋음
+  · 印星일(인성): 70점대 → 좋음
+  · 食傷일(식상): 65점대 → 좋음
   · 財星일(재성): 55점대
   · 官星일(관성): 50점대`
       : ''
@@ -201,6 +214,70 @@ export async function generateWeeklyReading(
     ? `\n년지·월지 충·합 사전 계산:\n${yearMonthAdjNotes.join('\n')}`
     : ''
 
+  // 사용자 사주 지지 목록 (삼합/반합 계산용)
+  const userJiList = [
+    saju.yearPillar[1], saju.monthPillar[1], saju.dayPillar[1],
+    ...(saju.hourPillar ? [saju.hourPillar[1]] : []),
+  ]
+
+  // 삼합(三合)/반합(半合) 사전 계산
+  const samhapAdjNotes = weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const dayJi = s.dayPillar[1]
+    for (const group of SAMHAP_GROUPS) {
+      if (!group.includes(dayJi)) continue
+      const userMatches = group.filter(ji => ji !== dayJi && userJiList.includes(ji))
+      if (userMatches.length === 2) {
+        return `  · ${dayNames[i]}요일: 삼합(三合) 완성 — 일진 ${dayJi} + 사주 ${userMatches.join('·')} → 삼합 기운 충만, 추가 +7점`
+      } else if (userMatches.length === 1) {
+        return `  · ${dayNames[i]}요일: 반합(半合) — 일진 ${dayJi}↔사주 ${userMatches[0]} → 반합 길운, 추가 +3점`
+      }
+    }
+    return null
+  }).filter(Boolean)
+  const samhapAdjNote = samhapAdjNotes.length > 0
+    ? `\n삼합·반합 사전 계산:\n${samhapAdjNotes.join('\n')}`
+    : ''
+
+  // 사용자 시지(時支)와 일진 지지의 충합 사전 계산
+  const userHourJi = saju.hourPillar ? saju.hourPillar[1] : null
+  let hourAdjNote = ''
+  if (userHourJi) {
+    const hourAdjNotes = weekDates.map((dateStr, i) => {
+      const [ay, am, ad] = dateStr.split('-').map(Number)
+      const s = calculateSaju(ay, am, ad)
+      const dayJi = s.dayPillar[1]
+      const isChung = CHUNG_PAIRS_W.some(([a, b]) =>
+        (dayJi === a && userHourJi === b) || (dayJi === b && userHourJi === a)
+      )
+      const isHap = YUKHAP_PAIRS_W.some(([a, b]) =>
+        (dayJi === a && userHourJi === b) || (dayJi === b && userHourJi === a)
+      )
+      if (isChung) return `  · ${dayNames[i]}요일: 시지충(時支冲) — 일진 ${dayJi}↔사용자 시지 ${userHourJi} 충 → 추가 -3점`
+      if (isHap)   return `  · ${dayNames[i]}요일: 시지합(時支合) — 일진 ${dayJi}↔사용자 시지 ${userHourJi} 합 → 추가 +2점`
+      return null
+    }).filter(Boolean)
+    hourAdjNote = hourAdjNotes.length > 0
+      ? `\n시지 충·합 사전 계산:\n${hourAdjNotes.join('\n')}`
+      : ''
+  }
+
+  // 공망일(空亡日) 사전 계산
+  const gongmangJiList = detail.gongmangPillars?.map((p: { ji: string }) => p.ji) || []
+  const gongmangNotes = weekDates.map((dateStr, i) => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    const s = calculateSaju(ay, am, ad)
+    const dayJi = s.dayPillar[1]
+    if (gongmangJiList.includes(dayJi)) {
+      return `  · ${dayNames[i]}요일: 공망일(空亡日) — 일진 ${dayJi}가 사용자 공망 → 추가 -5점`
+    }
+    return null
+  }).filter(Boolean)
+  const gongmangNote = gongmangNotes.length > 0
+    ? `\n공망일 사전 계산:\n${gongmangNotes.join('\n')}`
+    : ''
+
   const userPrompt = `${birthDate}생 사용자의 이번 주(${weekStart} ~ ${weekDates[6]}) 운세를 분석해주세요.
 
 사주팔자 정보:
@@ -226,7 +303,12 @@ ${weekDates.map((d, i) => `- ${dayNames[i]}요일 (${d}): 일진 ${dayIljin[i]}`
 - 년지충(年支冲): 사용자 년지와 일진 지지가 충이면 추가 -5점 (근본 기운 흔들림)
 - 년지합(年支合): 사용자 년지와 일진 지지가 합이면 추가 +3점 (근본 기운 안정)
 - 천간합(天干合): 사용자 일간과 일진 천간이 합이면 추가 +5점 (기운 융합)
-- 천간충(天干冲): 사용자 일간과 일진 천간이 충이면 추가 -8점 (긴장·갈등)${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}`
+- 천간충(天干冲): 사용자 일간과 일진 천간이 충이면 추가 -8점 (긴장·갈등)
+- 시지충(時支冲): 사용자 시지와 일진 지지가 충이면 추가 -3점 (시간·세부 활동 기운 방해)
+- 시지합(時支合): 사용자 시지와 일진 지지가 합이면 추가 +2점 (세부 활동 기운 강화)
+- 삼합(三合): 일진 지지 + 사주 지지 2개가 삼합 그룹(인오술·신자진·해묘미·사유축) 완성이면 추가 +7점
+- 반합(半合): 일진 지지 + 사주 지지 1개가 삼합 그룹 내 2개 구성이면 추가 +3점
+- 공망일(空亡日): 일진 지지가 사용자 공망과 일치하면 추가 -5점 (기대·계획 변수)${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${gongmangNote}${samhapAdjNote}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

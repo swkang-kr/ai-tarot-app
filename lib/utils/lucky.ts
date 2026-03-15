@@ -28,13 +28,14 @@ export const ELEMENT_LUCKY_DIRECTION: Record<string, { name: string; emoji: stri
   '수': { name: '북쪽', emoji: '↑' },
 }
 
-// 오행 → 행운 음식
+// 오행 → 행운 음식 — 전통 명리학 오미(五味) 기준
+// 목(木)=산(酸,신맛) / 화(火)=고(苦,쓴맛) / 토(土)=감(甘,단맛) / 금(金)=신(辛,매운맛) / 수(水)=함(鹹,짠맛)
 export const ELEMENT_LUCKY_FOOD: Record<string, string[]> = {
-  '목': ['샐러드', '새싹채소', '시금치', '브로콜리'],
-  '화': ['매운 음식', '구운 고기', '커피', '카레'],
-  '토': ['꿀', '고구마', '단호박', '두부'],
-  '금': ['흰쌀밥', '배', '무', '우유'],
-  '수': ['생선회', '미역국', '해산물', '된장'],
+  '목': ['샐러드', '새싹채소', '시금치', '브로콜리'],       // 신맛·청색 채소
+  '화': ['커피', '녹차', '쑥차', '쓴나물'],                 // 쓴맛 — 쑥·커피·녹차
+  '토': ['꿀', '고구마', '단호박', '두부'],                 // 단맛·황색 음식
+  '금': ['마늘', '생강', '고추', '양파'],                   // 매운맛 — 마늘·고추·파
+  '수': ['생선회', '미역국', '해산물', '된장'],              // 짠맛·해산물
 }
 
 // 오행 → 행운 숫자
@@ -76,9 +77,11 @@ export interface LuckyInfo {
   todayIljin: string
   /** 오늘 일진 의미 */
   todayIljinMeaning: string
+  /** 오늘이 공망일(空亡日)인지 여부 */
+  isGongmangDay?: boolean
 }
 
-export function calculateLucky(saju: SajuInfo, today: Date = new Date(), bodyStrength?: string): LuckyInfo {
+export function calculateLucky(saju: SajuInfo, today: Date = new Date(), bodyStrength?: string, yongshinEl?: string, gongmang?: [string, string]): LuckyInfo {
   // 사용자 일간 오행
   const baseGan = saju.dayPillar[0]
   const baseElement = CHEONGAN_ELEMENT_SHORT[baseGan] || '목'
@@ -111,14 +114,18 @@ export function calculateLucky(saju: SajuInfo, today: Date = new Date(), bodyStr
   const jiMeaning = JI_MEANING_SHORT[todayJi] || '에너지'
   const todayIljinMeaning = `${ganMeaning}의 기운과 ${jiMeaning}의 기운이 교차하는 날`
 
+  const SANGGEUK: Record<string, string> = {
+    '목': '토', '화': '금', '토': '수', '금': '목', '수': '화',
+  }
+
   // 행운 오행: 신강/신약 기반 용신(用神) 오행
-  // 신강(身强) → 식상(食傷)=내가 생하는 오행 (설기·소모로 균형)
+  // 신강(身强) → 관성(官星)=나를 극하는 오행 — 억부론 1순위 용신
   // 신약(身弱) → 인성(印星)=나를 생하는 오행 (보충으로 균형)
   // 중화(中和) → 비겁(比劫)=나와 같은 오행 (현상 유지)
   let boostElement: string
   if (bodyStrength === '신강(身强)') {
-    // 식상(食傷): 내가 생하는 오행
-    boostElement = SANGSAENG[baseElement] || baseElement
+    // 관성(官星): 나를 극하는 오행 — 억부론 신강 1순위 용신
+    boostElement = Object.entries(SANGGEUK).find(([, v]) => v === baseElement)?.[0] || SANGSAENG[baseElement] || baseElement
   } else if (bodyStrength === '중화(中和)') {
     // 중화: 같은 오행(비겁)으로 현상 유지
     boostElement = baseElement
@@ -126,6 +133,8 @@ export function calculateLucky(saju: SajuInfo, today: Date = new Date(), bodyStr
     // 신약(身弱) 또는 미지정: 인성(印星)=나를 생하는 오행
     boostElement = Object.entries(SANGSAENG).find(([, v]) => v === baseElement)?.[0] || baseElement
   }
+  // 조후론(調候論)/종격(從格) 용신이 제공된 경우 우선 적용
+  if (yongshinEl && ELEMENT_LUCKY_COLOR[yongshinEl]) boostElement = yongshinEl
 
   const color = ELEMENT_LUCKY_COLOR[boostElement] || ELEMENT_LUCKY_COLOR['목']
   const direction = ELEMENT_LUCKY_DIRECTION[boostElement] || ELEMENT_LUCKY_DIRECTION['목']
@@ -139,25 +148,24 @@ export function calculateLucky(saju: SajuInfo, today: Date = new Date(), bodyStr
   const luckyNumber = numbers[dayOfYear % numbers.length]
 
   // 행운의 시간대 (오늘 일진 기반) — 십이시진 오행 정확 매핑
-  // 木: 寅(3-5시)·卯(5-7시) / 火: 巳(9-11시)·午(11-13시)
-  // 土: 辰(7-9시)·未(13-15시)·戌(19-21시)·丑(1-3시) (토는 진시 대표)
-  // 金: 申(15-17시)·酉(17-19시) / 水: 亥(21-23시)·子(23-1시)
+  // 木: 寅(3-5시)·卯(5-7시) → 묘시(卯時)가 목의 왕기(旺氣)
+  // 火: 巳(9-11시)·午(11-13시) → 오시(午時)가 화의 제왕(帝旺)
+  // 土: 辰(7-9시)·未(13-15시)·戌(19-21시)·丑(1-3시) → 진시(辰時) 대표 (4계절 환절기)
+  // 金: 申(15-17시)·酉(17-19시) → 유시(酉時)가 금의 제왕(帝旺)
+  // 水: 亥(21-23시)·子(23-1시) → 자시(子時)가 수의 제왕(帝旺)
   const LUCKY_HOURS: Record<string, string> = {
-    '목': '오전 5-7시 (묘시)',      // 묘(卯)는 木
-    '화': '오전 9-11시 (사시)',     // 사(巳)는 火
-    '토': '오전 7-9시 (진시)',      // 진(辰)은 土 — 기존 오(午·火) 오류 수정
-    '금': '오후 3-5시 (신시)',      // 신(申)은 金
-    '수': '오후 9-11시 (해시)',     // 해(亥)는 水 — 기존 유(酉·金) 오류 수정
+    '목': '오전 3-7시 (인시·묘시)',          // 寅卯 — 木의 왕기
+    '화': '오전 9시~오후 1시 (사시·오시)',    // 巳午 — 火의 왕기, 오시(11-13시) 제왕
+    '토': '오전 7-9시, 오후 1-3시, 저녁 7-9시, 새벽 1-3시 (진시·미시·술시·축시)', // 辰未戌丑 — 土는 4계절 환절기 모두
+    '금': '오후 3-7시 (신시·유시)',           // 申酉 — 金의 왕기, 유시(17-19시) 제왕
+    '수': '오후 9시~오전 1시 (해시·자시)',    // 亥子 — 水의 왕기, 자시(23-1시) 제왕
   }
-  const luckyHour = LUCKY_HOURS[boostElement] || '오전 9-11시'
+  const luckyHour = LUCKY_HOURS[boostElement] || '오전 9시~오후 1시'
 
   // 행운 점수: 오늘 오행과 용신(boostElement) 오행의 상성
   // ── 용신 기준 비교로 신강/신약 역전 문제 해결 ──────────────
   // 신강: 용신=식상(설기 필요) → 식상 오는 날 최고, 인성 오는 날 나쁨
   // 신약: 용신=인성(보강 필요) → 인성 오는 날 최고, 식상 오는 날 나쁨
-  const SANGGEUK: Record<string, string> = {
-    '목': '토', '화': '금', '토': '수', '금': '목', '수': '화',
-  }
   let score = 60
   if (todayElement === boostElement) score = 90                      // 용신 오행 일치 → 최고
   else if (SANGSAENG[todayElement] === boostElement) score = 80      // 오늘이 용신 강화 → 매우 좋음
@@ -175,9 +183,9 @@ export function calculateLucky(saju: SajuInfo, today: Date = new Date(), bodyStr
   }
   const todayJiEl = JIJI_EL_SHORT[todayJi] || ''
   if (todayJiEl) {
-    // 지지 오행 보정: 용신(boostElement) 기준 (천간 보정과 동일 기준)
-    if (SANGSAENG[todayJiEl] === boostElement) score = Math.min(100, score + 7)  // 지지가 용신 생함
-    else if (SANGGEUK[todayJiEl] === boostElement) score = Math.max(10, score - 7) // 지지가 용신 극함
+    // 지지 오행 보정: 용신(boostElement) 기준 (천간보다 뿌리 깊으나 ±5 적용으로 균형 유지)
+    if (SANGSAENG[todayJiEl] === boostElement) score = Math.min(100, score + 5)  // 지지가 용신 생함
+    else if (SANGGEUK[todayJiEl] === boostElement) score = Math.max(10, score - 5) // 지지가 용신 극함
   }
 
   // ── 충일(冲日): 일진 지지와 사용자 일지(日支) 충이면 변동·불안 -10 ─
@@ -199,17 +207,55 @@ export function calculateLucky(saju: SajuInfo, today: Date = new Date(), bodyStr
   )
   if (isHapDay) score = Math.min(100, score + 5)
 
+  // ── 형일(刑日): 일진 지지와 사용자 일지 형(刑)이면 -5 ───────
+  // 삼형(三刑): 인사신(寅巳申), 축술미(丑戌未) / 상형(相刑): 자묘(子卯)
+  const HYEONG_PAIRS: [string, string][] = [
+    ['인', '사'], ['사', '신'], ['인', '신'],   // 寅巳申 삼형
+    ['축', '술'], ['술', '미'], ['축', '미'],   // 丑戌未 삼형
+    ['자', '묘'],                               // 子卯 상형
+  ]
+  const isHyeongDay = HYEONG_PAIRS.some(
+    ([a, b]) => (todayJi === a && userDayJi === b) || (todayJi === b && userDayJi === a)
+  )
+  if (isHyeongDay && !isChungDay) score = Math.max(10, score - 5)
+
+  // ── 해일(害日): 일진 지지와 사용자 일지 육해(六害)이면 -3 ────
+  const HAE_PAIRS: [string, string][] = [
+    ['자', '미'], ['축', '오'], ['인', '사'], ['묘', '진'], ['신', '해'], ['유', '술'],
+  ]
+  const isHaeDay = HAE_PAIRS.some(
+    ([a, b]) => (todayJi === a && userDayJi === b) || (todayJi === b && userDayJi === a)
+  )
+  if (isHaeDay && !isChungDay && !isHyeongDay) score = Math.max(10, score - 3)
+
+  // ── 파일(破日): 일진 지지와 사용자 일지 육파(六破)이면 -3 ────
+  const PA_PAIRS: [string, string][] = [
+    ['자', '유'], ['오', '묘'], ['축', '진'], ['술', '미'], ['인', '해'], ['신', '사'],
+  ]
+  const isPaDay = PA_PAIRS.some(
+    ([a, b]) => (todayJi === a && userDayJi === b) || (todayJi === b && userDayJi === a)
+  )
+  if (isPaDay && !isChungDay && !isHyeongDay && !isHaeDay) score = Math.max(10, score - 3)
+
+  // ── 공망일(空亡日): 오늘 일진 지지가 사용자 공망이면 -5 ─────
+  const isGongmangDay = !!(gongmang && (gongmang[0] === todayJi || gongmang[1] === todayJi))
+  if (isGongmangDay) {
+    score = Math.max(10, score - 5)
+  }
+
   // 계절 보정: 절기(節氣) 기준 월지(月支) 오행 — calculateSaju가 절기 기반으로 정확히 계산
   // (양력 월이 아닌 절기 기준이므로 입춘 전 2월도 정확히 축월로 처리)
   const seasonElement = JIJI_EL_SHORT[todaySaju.monthPillar[1]] || '목'
 
-  // 계절 오행이 용신을 극하면 -5, 용신 오행이 왕성(得令)하면 +5
+  // 계절 오행이 용신을 극하면 -5, 용신 오행이 왕성(得令)하면 +5, 계절이 용신 생하면 +3
   if (SANGGEUK[seasonElement] === boostElement) score = Math.max(10, score - 5)
   else if (seasonElement === boostElement) score = Math.min(100, score + 5)
+  else if (SANGSAENG[seasonElement] === boostElement) score = Math.min(100, score + 3) // 계절이 용신 생(生)함
 
   return {
     baseElement, todayElement, boostElement,
     color, direction, food, luckyNumber, luckyHour, score,
     todayIljin, todayIljinMeaning,
+    ...(isGongmangDay ? { isGongmangDay: true } : {}),
   }
 }

@@ -1,6 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
-import { getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars, getYongshin } from '@/lib/utils/saju'
+import { getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars, getYongshin, getSipseong } from '@/lib/utils/saju'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 
 export interface MonthFortune {
@@ -86,7 +86,18 @@ const SYSTEM_PROMPT = `당신은 20년 경력의 사주팔자 전문가입니다
 건강운(health):
   · 신약일 때 관성(官星) 많은 달 → 과로·스트레스 → 건강 주의 (health 낮게)
   · 신강일 때 인성(印星) 과한 달 → 과잉 에너지 축적 → 건강 주의
-  · 충(冲) 많은 달 → 사고·수술 주의`
+  · 충(冲) 많은 달 → 사고·수술 주의
+
+[신살(神煞) fieldScores 반영 원칙]
+신살이 있는 경우, 해당 신살의 특성을 월별 fieldScores에 반영:
+  · 도화살(桃花煞): 월간 love +5~10, wealth -3~5 (이성 기회↑, 감정 지출)
+  · 역마살(驛馬煞): career +3~8 (이동·외부 활동 달에 강화), health -3
+  · 화개살(華蓋煞): career +10(예술·전문직 달), love -3~5 (고독·집중)
+  · 양인살(羊刃煞): career +5~10, health -3~5 (부상·극단 주의)
+  · 백호대살(白虎大煞): health -8~10 (건강 각별 주의), yearSummary에 경고 포함
+  · 귀문관살(鬼門關煞): career +5(창의·직관 강한 달), health -3~5
+  · 원진살(怨嗔煞): love -5~10, career -3 (대인관계 갈등 달에 반영)
+  · 괴강살(魁罡煞): career +5~10, love -5~8 (권위·고집으로 인한 갈등)`
 
 /**
  * 해당 연도의 절기(節氣) 정보 반환 — 사주 월령 기준 참고용
@@ -182,11 +193,40 @@ ${detail.specialRelations.length > 0 ? detail.specialRelations.map(r => `- ${r.t
     '자': '子', '축': '丑', '인': '寅', '묘': '卯', '진': '辰', '사': '巳',
     '오': '午', '미': '未', '신': '申', '유': '酉', '술': '戌', '해': '亥',
   }
+  const dayGanForSipseong = saju.dayPillar[0]
+  const userDayJiA = saju.dayPillar[1]
+  const userYearJiA = saju.yearPillar[1]
+  const userMonthJiA = saju.monthPillar[1]
+  const CHUNG_PAIRS_A: [string, string][] = [
+    ['자', '오'], ['축', '미'], ['인', '신'], ['묘', '유'], ['진', '술'], ['사', '해'],
+  ]
+  const YUKHAP_PAIRS_A: [string, string][] = [
+    ['자', '축'], ['인', '해'], ['묘', '술'], ['진', '유'], ['사', '신'], ['오', '미'],
+  ]
   const monthPillars = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1
     const ms = calculateSaju(targetYear, m, 20)
     const mp = ms.monthPillar
-    return `  · ${m}월: ${mp}(${GAN_HANJA_A[mp[0]] || ''}${JI_HANJA_A[mp[1]] || ''})`
+    const sipseong = getSipseong(dayGanForSipseong, mp[0])
+    const mJi = mp[1]
+    const adjParts: string[] = []
+    // 일지 충합
+    if (CHUNG_PAIRS_A.some(([a, b]) => (mJi === a && userDayJiA === b) || (mJi === b && userDayJiA === a)))
+      adjParts.push(`일지충(-8점)`)
+    else if (YUKHAP_PAIRS_A.some(([a, b]) => (mJi === a && userDayJiA === b) || (mJi === b && userDayJiA === a)))
+      adjParts.push(`일지합(+6점)`)
+    // 년지 충합
+    if (CHUNG_PAIRS_A.some(([a, b]) => (mJi === a && userYearJiA === b) || (mJi === b && userYearJiA === a)))
+      adjParts.push(`년지충(-4점)`)
+    else if (YUKHAP_PAIRS_A.some(([a, b]) => (mJi === a && userYearJiA === b) || (mJi === b && userYearJiA === a)))
+      adjParts.push(`년지합(+3점)`)
+    // 월지 충합
+    if (CHUNG_PAIRS_A.some(([a, b]) => (mJi === a && userMonthJiA === b) || (mJi === b && userMonthJiA === a)))
+      adjParts.push(`월지충(-5점)`)
+    else if (YUKHAP_PAIRS_A.some(([a, b]) => (mJi === a && userMonthJiA === b) || (mJi === b && userMonthJiA === a)))
+      adjParts.push(`월지합(+4점)`)
+    const adjStr = adjParts.length > 0 ? ` [${adjParts.join(' ')}]` : ''
+    return `  · ${m}월: ${mp}(${GAN_HANJA_A[mp[0]] || ''}${JI_HANJA_A[mp[1]] || ''}) 월간십성: ${sipseong}${adjStr}`
   })
 
   // 대운(大運) 현황 사전 계산
@@ -209,6 +249,26 @@ ${detail.specialRelations.length > 0 ? detail.specialRelations.map(r => `- ${r.t
 
 [${targetYear}년 세운(歲運) 정보 — 사전 계산값]
 - ${targetYear}년 세운 간지: ${seunPillar}(${seunPillarHanja})
+- 세운 천간 십성: 일간 ${saju.dayPillar[0]} 기준 세운 천간 ${seunPillar[0]}는 → ${getSipseong(saju.dayPillar[0], seunPillar[0])}
+  (세운 십성 의미를 yearSummary·annualAdvice에 반영: 편재년=재물기회·변화·대인운, 정관년=안정·승진·명예, 편관년=도전·압박, 식신년=결실·여유, 인성년=학문·귀인·내실)
+- 세운 지지↔사주 지지 충합 (코드 계산값):
+${(() => {
+  const seunJi = seunPillar[1]
+  const lines: string[] = []
+  if (CHUNG_PAIRS_A.some(([a,b]) => (seunJi===a&&userDayJiA===b)||(seunJi===b&&userDayJiA===a)))
+    lines.push(`  ⚠️ 세운 지지(${seunJi})↔일지(${userDayJiA}): 충(冲) — 심리 불안·변화·갈등 주의, yearSummary에 반영 + 전체 score -8점 기준`)
+  else if (YUKHAP_PAIRS_A.some(([a,b]) => (seunJi===a&&userDayJiA===b)||(seunJi===b&&userDayJiA===a)))
+    lines.push(`  ✅ 세운 지지(${seunJi})↔일지(${userDayJiA}): 합(合) — 감정·배우자·인연 안정, yearSummary에 반영 + 전체 score +6점 기준`)
+  if (CHUNG_PAIRS_A.some(([a,b]) => (seunJi===a&&userYearJiA===b)||(seunJi===b&&userYearJiA===a)))
+    lines.push(`  ⚠️ 세운 지지(${seunJi})↔년지(${userYearJiA}): 충(冲) — 뿌리·환경 변동 주의, yearSummary에 반영`)
+  else if (YUKHAP_PAIRS_A.some(([a,b]) => (seunJi===a&&userYearJiA===b)||(seunJi===b&&userYearJiA===a)))
+    lines.push(`  ✅ 세운 지지(${seunJi})↔년지(${userYearJiA}): 합(合) — 출발점 기운 강화, yearSummary에 반영`)
+  if (CHUNG_PAIRS_A.some(([a,b]) => (seunJi===a&&userMonthJiA===b)||(seunJi===b&&userMonthJiA===a)))
+    lines.push(`  ⚠️ 세운 지지(${seunJi})↔월지(${userMonthJiA}): 충(冲) — 직업·사회운 변동, yearSummary에 반영`)
+  else if (YUKHAP_PAIRS_A.some(([a,b]) => (seunJi===a&&userMonthJiA===b)||(seunJi===b&&userMonthJiA===a)))
+    lines.push(`  ✅ 세운 지지(${seunJi})↔월지(${userMonthJiA}): 합(合) — 직업·사회운 활성화, yearSummary에 반영`)
+  return lines.length > 0 ? lines.join('\n') : `  · 세운 지지(${seunJi})와 사주 지지(일지·년지·월지) 간 특별한 충합 없음`
+})()}
 
 [${targetYear}년 월운(月運) 천간지지 — 각 달 절기 기준 사전 계산]
 ※ 이 값을 기준으로 월별 운세를 산출하세요 (AI 계산 불필요):
@@ -216,7 +276,7 @@ ${monthPillars.join('\n')}
 
 [대운(大運) 현황]
 - 대운 방향: ${daeunDirection}
-- 대운 시작 나이: ${daeunStart}세${currentDaeun ? `\n- 현재 대운(${targetYear}년 기준): ${currentDaeun.pillar}(${currentDaeun.hanja}) — ${currentDaeun.age}세 대운` : ''}${nextDaeun ? `\n- 다음 대운: ${nextDaeun.pillar}(${nextDaeun.hanja}) — ${nextDaeun.age}세부터` : ''}
+- 대운 시작 나이: ${daeunStart}세${currentDaeun ? `\n- 현재 대운(${targetYear}년 기준): ${currentDaeun.pillar}(${currentDaeun.hanja}) — ${currentDaeun.age}세 대운\n  · 천간기(前5년): ${currentDaeun.age}~${currentDaeun.age + 4}세 (${currentDaeun.pillar[0]}천간 영향, 사회·외부 운)\n  · 지지기(後5년): ${currentDaeun.age + 5}~${currentDaeun.age + 9}세 (${currentDaeun.pillar[1]}지지 영향, 내면·가정 운)` : ''}${nextDaeun ? `\n- 다음 대운: ${nextDaeun.pillar}(${nextDaeun.hanja}) — ${nextDaeun.age}세부터` : ''}
 
 세운·월운·대운의 교차 분석을 반영하여 월별 운세를 산출해주세요.
 
@@ -226,14 +286,26 @@ ${monthPillars.join('\n')}
 - 대운(大運): 10년 흐름 배경 (10% 영향)
 - 적용: 세운 기본 방향에 월운이 순응하면 +5~10점, 역행하면 -5~10점 조정
 
-[삼재(三災) 분야별 적용 원칙]
-삼재가 있는 경우 yearSummary와 annualAdvice에 반드시 반영하고, 월별 점수도 아래 기준으로 하향 조정:
-- 들삼재(삼재 첫 해): 큰 변화·이동·사고 주의 — score 전반적으로 -5~10점, 1분기(봄) 특히 주의
-  예) "올해는 들삼재로 시작의 해입니다. 큰 결정과 이동은 최대한 미루고 안전을 최우선으로 하세요."
-- 눌삼재(삼재 중간 해): 감정·재물 기복, 인내 필요 — score -3~7점, 대인관계 갈등 주의
-  예) "눌삼재의 해로 인내와 절제가 열쇠입니다. 욕심을 내려놓으면 후반부부터 회복됩니다."
-- 날삼재(삼재 마지막 해): 마무리·정리의 해, 신중한 결산 — score -3~5점, 4분기(겨울) 이후 회복
-  예) "날삼재로 삼재의 기운이 걷히는 해입니다. 상반기 정리를 잘하면 하반기부터 새 출발을 준비할 수 있습니다."${detail ? `
+[삼재(三災) 분야별·분기별 적용 원칙]
+삼재가 있는 경우 yearSummary와 annualAdvice에 반드시 반영하고, 월별 점수를 분기별로 차등 하향 조정:
+- 들삼재(삼재 첫 해): 시작의 충격, 큰 변화·이동·사고 주의
+  · 1분기(1~3월): 가장 강한 타격 — score -6~9점 (이동·변화·시작 최대 주의)
+  · 2분기(4~6월): 여진 지속 — score -5~8점
+  · 3분기(7~9월): 점차 완화 — score -3~5점
+  · 4분기(10~12월): 안정 회복 시작 — score -2~3점
+  예) "올해는 들삼재로 시작의 해입니다. 1분기 큰 결정·이동은 최대한 미루고 안전을 최우선으로 하세요."
+- 눌삼재(삼재 중간 해): 감정·재물 기복, 인내의 해
+  · 1분기(1~3월): 전년도 들삼재 여파 — score -4~6점
+  · 2분기(4~6월): 기복의 정점 — score -5~8점 (재물·감정 롤러코스터)
+  · 3분기(7~9월): 인내 유지 — score -3~5점
+  · 4분기(10~12월): 후반 회복 신호 — score -2~3점
+  예) "눌삼재의 해로 인내와 절제가 열쇠입니다. 욕심을 내려놓으면 4분기부터 회복됩니다."
+- 날삼재(삼재 마지막 해): 마무리·정리·결산의 해
+  · 1분기(1~3월): 삼재 마지막 기운 — score -4~6점
+  · 2분기(4~6월): 정리의 분기 — score -3~5점
+  · 3분기(7~9월): 점차 걷힘 — score -1~3점
+  · 4분기(10~12월): 삼재 기운 해소, 새 출발 준비 — score 정상
+  예) "날삼재로 삼재의 기운이 걷히는 해입니다. 상반기 정리를 잘하면 4분기부터 새 출발을 준비할 수 있습니다."${detail ? `
 
 [십이운성(十二運星) 기반 월별 강약 참고]
 일간 ${detail.dayMaster.name} 기준 각 월운 지지의 십이운성:
@@ -260,13 +332,13 @@ ${(() => {
     if (!ms) return ''
     const ji = ms.monthPillar[1]
     const unsung = sipuTable[ji] || '불명'
-    const strength = ['제왕', '임관'].includes(unsung) ? '★강운' : ['묘', '절', '병', '사'].includes(unsung) ? '▼주의' : ''
+    const strength = unsung === '제왕' ? '★★★절정운' : unsung === '임관' ? '★★상승운' : ['장생', '관대'].includes(unsung) ? '★좋음' : unsung === '쇠' ? '△소강' : ['묘', '절'].includes(unsung) ? '▼▼정체주의' : ['병', '사'].includes(unsung) ? '▼하향주의' : ''
     return `  · ${m}월(${ms.monthPillar}): 십이운성 ${unsung}(${JI_HANJA_B[ji] || ''}) ${strength}`
   }).filter(Boolean).join('\n')
 })()}
 
 [공망(空亡) 월운 교차 분석]
-공망 지지: ${detail.gongmang ? `${detail.gongmang[0]}(${detail.gongmang[1]})` : '없음'} — 월운 지지와 겹치는 달은 기대·계획이 허황되거나 변수가 생길 수 있으므로 score를 약간 낮추고 summary에 반영하세요.
+공망 지지: ${detail.gongmang ? `${detail.gongmang[0]}·${detail.gongmang[1]}` : '없음'} — 월운 지지와 겹치는 달은 기대·계획이 허황되거나 변수가 생길 수 있으므로 score를 약간 낮추고 summary에 반영하세요.
 ${detail.gongmangPillars && detail.gongmangPillars.length > 0 ? `공망 위치: ${detail.gongmangPillars.map(p => `${p.label}(${p.ji}) — ${p.meaning}`).join(' / ')}` : ''}` : ''}`
 
   const message = await anthropic.messages.create({

@@ -67,7 +67,8 @@ function getIljinSangsu(targetYear: number, lunarMonth: number): number {
     // 해당 양력 날짜의 일진(日辰) 계산
     const saju = calculateSaju(year, month, day)
     return getGapjaNum60(saju.dayPillar[0], saju.dayPillar[1])
-  } catch {
+  } catch (e) {
+    console.error(`[Tojeong] 일진상수 계산 실패 — targetYear=${targetYear}, lunarMonth=${lunarMonth}:`, e)
     return 1  // 지원 범위 외 날짜 등 오류 시 기본값
   }
 }

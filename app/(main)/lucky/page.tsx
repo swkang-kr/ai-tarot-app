@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import DatePicker from '@/components/DatePicker'
 import LuckyCard from '@/components/LuckyCard'
-import { getSajuInfo, getDetailedAnalysis } from '@/lib/utils/saju'
+import { getSajuInfo, getDetailedAnalysis, getYongshin } from '@/lib/utils/saju'
 import { calculateLucky, type LuckyInfo } from '@/lib/utils/lucky'
 
 export default function LuckyPage() {
@@ -21,7 +21,8 @@ export default function LuckyPage() {
       const dateStr = `${birthDate.getFullYear()}-${String(birthDate.getMonth() + 1).padStart(2, '0')}-${String(birthDate.getDate()).padStart(2, '0')}`
       const saju = getSajuInfo(dateStr, birthHour ?? undefined)
       const detail = getDetailedAnalysis(saju)
-      const lucky = calculateLucky(saju, new Date(), detail.bodyStrength)
+      const yongshin = getYongshin(saju, detail)
+      const lucky = calculateLucky(saju, new Date(), detail.bodyStrength, yongshin.yongshin, detail.gongmang)
       setLuckyInfo(lucky)
       setStep('result')
     } catch (e) {

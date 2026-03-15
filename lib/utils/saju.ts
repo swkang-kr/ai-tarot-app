@@ -41,7 +41,7 @@ export interface SajuDetailedAnalysis {
   dominantElement: string
   weakElement: string
   /** 신강(身强) / 신약(身弱) */
-  bodyStrength: '신강(身强)' | '신약(身弱)' | '중화(中和)'
+  bodyStrength: '신강(身强)' | '신약(身弱)' | '중화(中和)' | '종격(從格)'
   pillarsDetail: {
     label: string
     hangul: string | null
@@ -264,7 +264,7 @@ const JIJANGGAN: Record<string, string[]> = {
   '묘': ['갑', '을'],           // 木(여기)·木(본기)
   '진': ['을', '계', '무'],     // 木(여기)·水(중기)·土(본기)
   '사': ['무', '경', '병'],     // 土(여기)·金(중기)·火(본기)
-  '오': ['기', '정'],           // 土(중기)·火(본기)
+  '오': ['병', '기', '정'],     // 火(여기)·土(중기)·火(본기)
   '미': ['정', '을', '기'],     // 火(여기)·木(중기)·土(본기)
   '신': ['무', '임', '경'],     // 土(여기)·水(중기)·金(본기)
   '유': ['경', '신'],           // 金(여기)·金(본기)
@@ -283,7 +283,7 @@ const JIJANGGAN_WEIGHTED: Record<string, { gan: string; weight: number }[]> = {
   '묘': [{ gan: '갑', weight: 1 }, { gan: '을', weight: 3 }],
   '진': [{ gan: '을', weight: 1 }, { gan: '계', weight: 2 }, { gan: '무', weight: 3 }],
   '사': [{ gan: '무', weight: 1 }, { gan: '경', weight: 2 }, { gan: '병', weight: 3 }],
-  '오': [{ gan: '기', weight: 2 }, { gan: '정', weight: 3 }],
+  '오': [{ gan: '병', weight: 1 }, { gan: '기', weight: 2 }, { gan: '정', weight: 3 }],
   '미': [{ gan: '정', weight: 1 }, { gan: '을', weight: 2 }, { gan: '기', weight: 3 }],
   '신': [{ gan: '무', weight: 1 }, { gan: '임', weight: 2 }, { gan: '경', weight: 3 }],
   '유': [{ gan: '경', weight: 1 }, { gan: '신', weight: 3 }],
@@ -346,8 +346,8 @@ const YUKPA: [string, string, string][] = [
   ['오', '묘', '午卯파 - 감정 파탄'],
   ['축', '진', '丑辰파 - 재물 손실'],
   ['술', '미', '戌未파 - 관계 손상'],
-  ['인', '사', '寅巳파 - 계획 방해·갈등'],
-  ['신', '해', '申亥파 - 변동·이동 방해'],
+  ['인', '해', '寅亥파 - 계획 방해·갈등'],
+  ['사', '신', '巳申파 - 변동·이동 방해'],
 ]
 
 // 삼합(三合) — [지지 3개, 의미]
@@ -408,6 +408,9 @@ export function getGeokguk(dayGan: string, monthJi: string): string {
 
   const sipseong = getSipseong(dayGan, bongi)
   const SIPSEONG_GEOKGUK: Record<string, string> = {
+    // 비겁격: 음일간의 경우 양인격 없음 → 겁재 월지는 겁재격으로 판정
+    // 예) 을木 + 인月(본기 甲), 정火 + 사月(본기 丙), 기土 + 진/술月(본기 戊) 등
+    '겁재(劫財)': '겁재격(劫財格)',
     '정인(正印)': '정인격(正印格)',
     '편인(偏印)': '편인격(偏印格)',
     '식신(食神)': '식신격(食神格)',
@@ -494,7 +497,8 @@ const YANGINSAL_MAP: Record<string, string> = {
 }
 
 // 괴강살(魁罡煞): 해당 일주 집합
-const GWAEGANG_PILLARS = new Set(['경진', '경술', '임진', '무술'])
+// 전통 기준 4일주: 庚辰·庚戌·壬辰·壬戌 + 戊戌(일부 유파 포함)
+const GWAEGANG_PILLARS = new Set(['경진', '경술', '임진', '임술', '무술'])
 
 // 백호대살(白虎大煞): 해당 일주 집합
 const BAEKHO_PILLARS = new Set(['갑진', '을미', '병술', '정축', '무진', '기미', '경술', '신축', '임진', '계미'])
@@ -534,7 +538,7 @@ const GEUMYEO_MAP: Record<string, string> = {
 
 // 홍염살(紅艶殺): 일간 기준 이성 매력·예술 기질 지지 — 이성 문제·감성 기질
 const HONGYEOM_MAP: Record<string, string> = {
-  '갑': '오', '을': '신', '병': '인', '정': '미',
+  '갑': '오', '을': '오', '병': '인', '정': '미',
   '무': '진', '기': '진', '경': '술', '신': '유',
   '임': '자', '계': '신',
 }
@@ -757,7 +761,7 @@ export function getSinsalList(saju: SajuInfo): SinsalInfo[] {
   ]
   const HYEONCHIM_GANS = new Set(['갑', '을', '신', '임', '계'])
   const hyeonchimGans = ganList.filter(g => HYEONCHIM_GANS.has(g))
-  if (hyeonchimGans.length >= 1) {
+  if (hyeonchimGans.length >= 2) {
     const matchingPillars: string[] = []
     const ganPillarLabels = ['년주', '월주', '일주', '시주']
     ganList.forEach((g, i) => {
@@ -866,6 +870,33 @@ export function getSinsalList(saju: SajuInfo): SinsalInfo[] {
     }
   }
 
+  // 삼형(三刑) — 사주 내 3개 모두 있을 때 신살 표시
+  // 인사신(寅巳申): 무은지형(無恩之刑) — 은혜를 모르는 형, 관재·사고 주의
+  // 축술미(丑戌未): 지세지형(持勢之刑) — 세력을 믿고 대드는 형, 재물 손실·분쟁
+  const jijiSet2 = new Set(pillarData.map(p => p.ji))
+  const SAMHYEONG_SINSAL: [string[], string, string][] = [
+    [['인', '사', '신'], '寅巳申 삼형(三刑)', '무은지형(無恩之刑) — 관재·사고·시비에 주의하세요. 강한 추진력이 있으나 충돌을 조심해야 합니다.'],
+    [['축', '술', '미'], '丑戌未 삼형(三刑)', '지세지형(持勢之刑) — 재물 손실·분쟁 가능성. 고집과 아집을 내려놓으면 흉을 줄일 수 있습니다.'],
+  ]
+  for (const [group, name, meaning] of SAMHYEONG_SINSAL) {
+    if (group.every(ji => jijiSet2.has(ji))) {
+      result.push({
+        name,
+        meaning,
+        pillars: pillarData.filter(p => group.includes(p.ji)).map(p => p.label),
+      })
+    }
+  }
+
+  // 자묘형(子卯刑, 無禮之刑) — 자(子)와 묘(卯) 둘 다 있으면 성립 (2지지 형)
+  if (jijiSet2.has('자') && jijiSet2.has('묘')) {
+    result.push({
+      name: '子卯 자묘형(刑)',
+      meaning: '무례지형(無禮之刑) — 예절·법도·관계에서 마찰이 생기기 쉽습니다. 구설·법적 시비에 주의하고 언행을 조심하세요.',
+      pillars: pillarData.filter(p => p.ji === '자' || p.ji === '묘').map(p => p.label),
+    })
+  }
+
   return result
 }
 
@@ -912,7 +943,19 @@ export function getCrossCompatibilityRelations(saju1: SajuInfo, saju2: SajuInfo)
   }
 
   // 일지·월지 형(刑) 관계 — 갈등·마찰 요인
+  // 자형(自刑): 오·진·유·해 지지가 두 사람 모두 같을 때
+  const JAJAHYEONG_MEANING: Record<string, string> = {
+    '오': '午午 자형(自刑) — 과도한 열정·자기 소모, 고집 충돌',
+    '진': '辰辰 자형(自刑) — 완고함·고집으로 인한 반복 갈등',
+    '유': '酉酉 자형(自刑) — 자존심 상처·예민함과 날카로운 기운',
+    '해': '亥亥 자형(自刑) — 내면 갈등·심리적 불안, 서로 자극',
+  }
   const checkHyeong = (jiA: string, jiB: string, label: string) => {
+    // 자형: 같은 지지가 만날 때 (오·진·유·해)
+    if (jiA === jiB && JAJAHYEONG_MEANING[jiA]) {
+      notes.push(`${label} 자형(自刑): ${JAJAHYEONG_MEANING[jiA]}`)
+      return
+    }
     for (const [group, meaning, required] of SAMHYEONG) {
       if (required === 2 && ((jiA === group[0] && jiB === group[1]) || (jiA === group[1] && jiB === group[0]))) {
         notes.push(`${label} 형(刑): ${jiA}↔${jiB} — ${meaning}`)
@@ -948,16 +991,34 @@ export function getCrossCompatibilityRelations(saju1: SajuInfo, saju2: SajuInfo)
 
   // 연지 삼합 (두 사람 연지가 같은 삼합 그룹)
   const SAMHAP_GROUPS: [string[], string][] = [
-    [['인', '오', '술'], '火局 삼합 — 열정적 결합'],
-    [['신', '자', '진'], '水局 삼합 — 지혜로운 결합'],
-    [['해', '묘', '미'], '木局 삼합 — 성장하는 결합'],
-    [['사', '유', '축'], '金局 삼합 — 안정적 결합'],
+    [['인', '오', '술'], '火局 — 열정적 결합'],
+    [['신', '자', '진'], '水局 — 지혜로운 결합'],
+    [['해', '묘', '미'], '木局 — 성장하는 결합'],
+    [['사', '유', '축'], '金局 — 안정적 결합'],
   ]
   for (const [group, meaning] of SAMHAP_GROUPS) {
     if (group.includes(yji1) && group.includes(yji2) && yji1 !== yji2) {
       notes.push(`연지 삼합(三合): ${yji1}↔${yji2} — ${meaning}`)
     }
   }
+
+  // 일지 삼합(三合)/반합(半合) — 두 사람 일지가 같은 삼합 그룹에 속하면 강한 인연 기운
+  // 두 지지가 3개 그룹 중 2개 = 반합(半合), 궁합에서 일지 반합은 매우 길한 인연
+  for (const [group, meaning] of SAMHAP_GROUPS) {
+    if (group.includes(ji1) && group.includes(ji2) && ji1 !== ji2) {
+      notes.push(`일지 반합(半合): ${ji1}↔${ji2} — ${meaning} (배우자 인연 기운 조화, 깊은 인연)`)
+    }
+  }
+
+  // 원진살(怨嗔煞) — 일지·년지 간 원진 체크
+  // 원진: 서로 질리고 원망하는 기운, 장기 관계에서 감정 소모·갈등 유발
+  const checkWonjin = (jiA: string, jiB: string, label: string) => {
+    if (WONJIN_MAP[jiA] === jiB) {
+      notes.push(`${label} 원진(怨嗔): ${jiA}↔${jiB} — 서로 질리고 원망하는 기운, 장기 관계에서 감정 소모·반목 주의`)
+    }
+  }
+  checkWonjin(ji1, ji2, '일지')
+  checkWonjin(yji1, yji2, '년지')
 
   return notes
 }
@@ -1165,31 +1226,36 @@ export function getYongshin(saju: SajuInfo, detail: SajuDetailedAnalysis): Yongs
 
   // ── 1. 억부론(抑扶論) 기반 용신 결정 ────────────────────────
   if (bodyStrength === '신강(身强)') {
-    // 신강: 설기(食傷, 내가 생하는 오행)로 과잉 기운 소통
-    const seolgi = SANGSAENG[dayShort] || ''
-    yongshinShort = seolgi
+    // 신강: 관성(官星, 나를 극하는 오행) 1순위 용신 — 전통 억부론
+    // 우선순위: ① 관성(제압) > ② 재성(소모) > ③ 식상(설기)
+    const gwanseong = Object.entries(SANGGEUK).find(([, v]) => v === dayShort)?.[0] || ''
+    yongshinShort = gwanseong || SANGGEUK[dayShort] || SANGSAENG[dayShort] || ''
     heukshinShort = Object.entries(SANGSAENG).find(([, v]) => v === dayShort)?.[0] || dayShort
-    reason = `억부론: 신강(身强) → 설기 ${ELEMENT_FULL[seolgi] || seolgi}으로 과잉 기운 소통`
+    reason = `억부론: 신강(身强) → 관성 ${ELEMENT_FULL[gwanseong] || yongshinShort}으로 강한 기운 제압`
   } else if (bodyStrength === '신약(身弱)') {
     // 신약: 인성(나를 생하는 오행)으로 일간 보강
     const inseong = Object.entries(SANGSAENG).find(([, v]) => v === dayShort)?.[0] || dayShort
     yongshinShort = inseong
-    heukshinShort = SANGSAENG[dayShort] || '' // 식상은 신약에게 설기 → 독
+    // 기신: 용신(인성)을 극하는 오행 — 억부론에서 신약의 핵심 기신은 재성(財星)
+    // 예) 甲木 신약 → 용신=수(인성), 기신=토(재성, 수를 극함), 구신=화(식상, 토를 생함)
+    heukshinShort = Object.entries(SANGGEUK).find(([, v]) => v === inseong)?.[0] || ''
     reason = `억부론: 신약(身弱) → 인성 ${ELEMENT_FULL[inseong] || inseong}으로 일간 보강`
   } else {
     // 중화: 오행 중 가장 부족한 오행 보완
     const sorted = [...detail.elementBalanceWithJijanggan].sort((a, b) => a.count - b.count)
     const weakShort = ELEMENT_SHORT[sorted[0].name] || dayShort
     yongshinShort = weakShort
-    heukshinShort = SANGGEUK[weakShort] || ''
+    // 기신: 용신(약한 오행)을 극하는 오행
+    heukshinShort = Object.entries(SANGGEUK).find(([, v]) => v === weakShort)?.[0] || ''
     reason = `중화(中和) → 가장 약한 ${ELEMENT_FULL[weakShort] || weakShort} 오행 보완`
   }
 
   // ── 2. 조후론(調候論) 보정 — 극단 계절 우선 ─────────────────
   // 조후론은 신강/신약과 무관하게 일간 오행 + 계절 조합으로 결정
-  // 여름(사오미월): 화·목·토 일간 → 조열(燥熱) → 수(水) 우선
+  // 여름(사오미월): 화·목·토·금 일간 → 조열(燥熱) → 수(水) 우선
   //   수 일간은 여름에도 억부=金인성이 적합하므로 제외
-  if (SUMMER_JI.has(monthJi) && ['화', '목', '토'].includes(dayShort)) {
+  //   금 일간은 여름 炎夏에 金이 녹으므로 水로 냉각·보호 (겨울 조후론과 대칭)
+  if (SUMMER_JI.has(monthJi) && ['목', '화', '토', '금'].includes(dayShort)) {
     yongshinShort = '수'
     heukshinShort = '화'
     reason = `조후론 우선: 여름(火月) — 수(水)로 조열(燥熱) 해소 필수`
@@ -1200,6 +1266,29 @@ export function getYongshin(saju: SajuInfo, detail: SajuDetailedAnalysis): Yongs
     yongshinShort = '화'
     heukshinShort = '수'
     reason = `조후론 우선: 겨울(水月) — 화(火)로 한습(寒濕) 해소 필수`
+  }
+  // 초봄(인월): 한기 잔존 — 겨울 조후론 연장판
+  //   수·금·토 일간은 인월에도 한기·한습 기운이 남아 화(火) 온기 공급 필요
+  //   목·화 일간은 봄 기운과 동기(同氣)라 조후 불필요 — 억부론 유지
+  if (monthJi === '인' && ['수', '금', '토'].includes(dayShort)) {
+    yongshinShort = '화'
+    heukshinShort = '수'
+    reason = `조후론 보조: 초봄(寅月) 한기 잔존 — 화(火)로 온기 보완`
+  }
+  // 초가을(신월): 잔서(殘暑) — 여름 조후론 연장판
+  //   화·토 일간은 신월 잔열로 수(水) 조후 필요
+  //   금 일간은 신월이 금의 제왕지절(帝旺地節)이라 조후보다 억부론 우선
+  //   목 일간: 申月은 金이 木을 극하므로 신약 목만 수(인성) 조후 적용,
+  //            신강 목은 금(관성)으로 억부론 유지
+  if (monthJi === '신' && ['화', '토'].includes(dayShort)) {
+    yongshinShort = '수'
+    heukshinShort = '화'
+    reason = `조후론 보조: 초가을(申月) 잔서(殘暑) — 수(水)로 여열 해소`
+  }
+  if (monthJi === '신' && dayShort === '목' && bodyStrength === '신약(身弱)') {
+    yongshinShort = '수'
+    heukshinShort = '화'
+    reason = `조후론 보조: 초가을(申月) 신약 목(木) — 수(水) 인성으로 보강`
   }
 
   // 구신(仇神): 기신(忌神)을 생하는 오행 — 간접적으로 해를 끼침
@@ -1300,7 +1389,7 @@ export function getDetailedAnalysis(saju: SajuInfo): SajuDetailedAnalysis {
   const totalJijang = Object.values(jijangCount).reduce((a, b) => a + b, 0)
   const helpingRatio = totalJijang > 0 ? helpingCount / totalJijang : 0
 
-  let bodyStrength: '신강(身强)' | '신약(身弱)' | '중화(中和)'
+  let bodyStrength: '신강(身强)' | '신약(身弱)' | '중화(中和)' | '종격(從格)'
   // 월령(月令) 가중치 3점: 전통 명리학에서 월령 득실이 신강/신약 판단의 50% 이상을 차지
   // 일지(日支) 가중치 1점, 지장간 비율 가중치 0~2점 (총 6점 만점)
   const strengthScore = (gotRyeong ? 3 : 0) + (gotJi ? 1 : 0) + (helpingRatio > 0.5 ? 2 : helpingRatio > 0.35 ? 1 : 0)
@@ -1487,6 +1576,10 @@ export function getDetailedAnalysis(saju: SajuInfo): SajuDetailedAnalysis {
       else if (SANGGEUK[dayShort] === strongest)   geokguk = '종재격(從財格)'  // 재성 강함
       else if (SANGGEUK[strongest] === dayShort)   geokguk = '종살격(從殺格)'  // 관성 강함
       else if (SANGSAENG[strongest] === dayShort)  geokguk = '종인격(從印格)'  // 인성 강함
+      // 종격은 억부론 배제 → bodyStrength를 '종격(從格)'으로 갱신
+      if (geokguk.startsWith('종') && geokguk.endsWith('格)')) {
+        bodyStrength = '종격(從格)'
+      }
     }
   }
 

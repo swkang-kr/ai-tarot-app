@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     // user may be null — continue regardless for anonymous access
 
-    const { person1BirthDate, person1BirthHour, person2BirthDate, person2BirthHour, relationshipType } = await req.json()
+    const { person1BirthDate, person1BirthHour, person2BirthDate, person2BirthHour, relationshipType, person1Gender, person2Gender } = await req.json()
 
     if (!isValidBirthDate(person1BirthDate) || !isValidBirthDate(person2BirthDate)) {
       return NextResponse.json(
@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
       person2Saju,
       relationshipType,
       crossRelations,
-      { person1: person1Detail.bodyStrength, person2: person2Detail.bodyStrength }
+      { person1: person1Detail.bodyStrength, person2: person2Detail.bodyStrength },
+      { person1: person1Gender ?? null, person2: person2Gender ?? null }
     )
 
     // Only save to DB if logged in

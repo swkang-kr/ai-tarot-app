@@ -15,7 +15,7 @@ const ELEMENT_NAME: Record<string, string> = {
 }
 
 export default function LuckyCard({ luckyInfo, birthDateStr }: LuckyCardProps) {
-  const { color, direction, food, luckyNumber, luckyHour, score, boostElement, baseElement, todayElement } = luckyInfo
+  const { color, direction, food, luckyNumber, luckyHour, score, boostElement, baseElement, todayElement, isGongmangDay } = luckyInfo
 
   const today = new Date()
   const dateLabel = `${today.getMonth() + 1}월 ${today.getDate()}일`
@@ -144,6 +144,22 @@ export default function LuckyCard({ luckyInfo, birthDateStr }: LuckyCardProps) {
           </div>
         </div>
       </motion.div>
+
+      {/* 공망일 경고 배너 */}
+      {isGongmangDay && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="bg-amber-500/15 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2"
+        >
+          <span className="text-xl">⚠️</span>
+          <div>
+            <p className="text-amber-300 text-xs font-semibold">공망일(空亡日)</p>
+            <p className="text-amber-200/70 text-[11px] leading-snug">오늘은 당신의 공망 지지와 일치하는 날입니다. 중요한 계약·결정은 내일로 미루세요.</p>
+          </div>
+        </motion.div>
+      )}
 
       {/* 오늘의 일진 */}
       <motion.div

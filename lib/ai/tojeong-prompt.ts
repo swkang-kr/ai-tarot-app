@@ -1,7 +1,13 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getSamjae, getYearJi } from '@/lib/utils/saju'
+import { getSamjae, getYearJi, getDetailedAnalysis, getYongshin } from '@/lib/utils/saju'
 import { calculateTojeongGwe, getKoreanAge, getGweName, getGweNameShort } from '@/lib/utils/tojeong'
+
+// 팔괘(八卦) 오행 매핑 — 상괘 번호 기준
+// 건(乾/1)=金, 태(兌/2)=金, 이(離/3)=火, 진(震/4)=木, 손(巽/5)=木, 감(坎/6)=水, 간(艮/7)=土, 곤(坤/8)=土
+const UPPER_GWE_ELEMENT: Record<number, string> = {
+  1: '금', 2: '금', 3: '화', 4: '목', 5: '목', 6: '수', 7: '토', 8: '토',
+}
 
 export interface TojeongResponse {
   gwe: string             // 괘명 (예: "천지비괘")
@@ -97,7 +103,39 @@ const SYSTEM_PROMPT = `당신은 토정비결(土亭秘訣) 전문가입니다. 
 - score 0-100 정수
 - 전통 토정비결 원리와 팔괘 상징에 기반하되 현대적 언어로 해석
 - 괘 번호는 1-144 범위
-- gweDescription은 상괘+중괘+하괘 조합의 전체 상(象)을 함축`
+- gweDescription은 상괘+중괘+하괘 조합의 전체 상(象)을 함축
+
+[gweEmoji 선택 기준 — 상괘(上卦) 팔괘 기준]
+- 건(乾/1) → ☀️ (하늘·태양·강건·창조)
+- 태(兌/2) → 😊 (연못·기쁨·소통·구변)
+- 이(離/3) → 🔥 (불·밝음·문명·명예)
+- 진(震/4) → ⚡ (우레·진동·갑작스런 변화)
+- 손(巽/5) → 🍃 (바람·유순·침투·여행)
+- 감(坎/6) → 💧 (물·위험·고난·지혜)
+- 간(艮/7) → ⛰️ (산·멈춤·신중·단계적 성취)
+- 곤(坤/8) → 🌍 (땅·포용·순응·조력)
+위 기준에서 상괘 번호에 맞는 이모지를 gweEmoji에 설정하세요.
+
+[상괘별 quarterFortune 기본 점수 기준 — 삼재 보정 전 baseline]
+- 건(乾/☰) 강건·창조의 기운: 전체 기본 75-85점 (활동적·도전적 운세)
+- 태(兌/☱) 기쁨·소통의 기운: 전체 기본 70-80점 (관계·구설 혼재)
+- 이(離/☲) 밝음·명예의 기운: 전체 기본 72-82점 (명예·재능 발휘)
+- 진(震/☳) 변화·진동의 기운: 전체 기본 65-78점 (갑작스런 변화·도전 포함)
+- 손(巽/☴) 유순·침투의 기운: 전체 기본 68-78점 (점진적 성과, 여행 유리)
+- 감(坎/☵) 위험·고난의 기운: 전체 기본 55-68점 (어려움 후 지혜로 성공)
+- 간(艮/☶) 멈춤·신중의 기운: 전체 기본 62-75점 (서두름 금물, 단계적 성취)
+- 곤(坤/☷) 포용·순응의 기운: 전체 기본 65-75점 (조력자 운세, 수동적 안정)
+위 baseline에 중괘 시기 흐름(+5~-5)과 하괘 마무리(+3~-3)를 더해 각 분기 score를 산출하세요.
+
+[용신(用神)·기신(忌神) ↔ 상괘 오행 교차 보정]
+- 팔괘 오행: 건/태=金, 이=火, 진/손=木, 감=水, 간/곤=土
+- userPrompt에 용신오행·기신오행·상괘오행이 제공됩니다
+- 상괘 오행 = 용신 오행이면 → quarterFortune 전체 score +6~8점 (수호 기운, 괘가 용신을 강화)
+- 상괘 오행 = 기신 오행이면 → quarterFortune 전체 score -6~8점 (방해 기운, 괘가 기신 오행을 강화)
+- 상괘 오행이 용신 오행을 상생(生)하면 → +3~5점
+- 상괘 오행이 기신 오행을 상생(生)하면 → -3~5점
+- 중립(관계 없음) → 보정 없음
+- 이 보정을 yearFortune에 한 문장으로 명시하세요 (예: "상괘 건(金)이 용신 금(金)과 일치하여 한 해 전체에 귀인의 기운이 따릅니다")`
 
 export async function generateTojeong(
   birthDate: string,
@@ -118,6 +156,30 @@ export async function generateTojeong(
   const upperGweInfo = UPPER_GWE_NAMES[gweResult.upperGwe]
   const middleGweMeaning = MIDDLE_GWE_MEANING[gweResult.middleGwe] || '전개 방식 불명'
   const lowerGweMeaning = LOWER_GWE_MEANING[gweResult.lowerGwe] || '결말 불명'
+
+  // 용신/기신 ↔ 상괘 오행 교차 계산
+  const detail = getDetailedAnalysis(saju)
+  const yongshinTJ = getYongshin(saju, detail)
+  const upperGweElement = UPPER_GWE_ELEMENT[gweResult.upperGwe] || '불명'
+  let yongshinGweNote = ''
+  if (upperGweElement !== '불명') {
+    if (upperGweElement === yongshinTJ.yongshin) {
+      yongshinGweNote = `상괘 ${upperGweInfo?.name || ''}(${upperGweElement}) = 용신 오행(${yongshinTJ.yongshinFull}) 일치 → score +6~8점, yearFortune에 귀인 기운 명시`
+    } else if (upperGweElement === yongshinTJ.heukshin) {
+      yongshinGweNote = `상괘 ${upperGweInfo?.name || ''}(${upperGweElement}) = 기신 오행(${yongshinTJ.heukshin}) 일치 → score -6~8점, yearFortune에 장애 기운 명시`
+    } else {
+      // 오행 상생 체크 (상괘가 용신을 생하는가)
+      const SANGSAENG_TJ: Record<string, string> = { '목': '화', '화': '토', '토': '금', '금': '수', '수': '목' }
+      if (SANGSAENG_TJ[upperGweElement] === yongshinTJ.yongshin) {
+        yongshinGweNote = `상괘 ${upperGweInfo?.name || ''}(${upperGweElement})가 용신 오행(${yongshinTJ.yongshinFull})을 상생 → score +3~5점`
+      } else if (SANGSAENG_TJ[upperGweElement] === yongshinTJ.heukshin) {
+        yongshinGweNote = `상괘 ${upperGweInfo?.name || ''}(${upperGweElement})가 기신 오행(${yongshinTJ.heukshin})을 상생 → score -3~5점`
+      } else {
+        yongshinGweNote = `상괘 ${upperGweInfo?.name || ''}(${upperGweElement})와 용신/기신 오행 중립 → score 보정 없음`
+      }
+    }
+  }
+
   const userPrompt = `${birthDate}생 사용자의 ${targetYear}년 토정비결을 풀이해주세요.
 
 사주팔자:
@@ -133,6 +195,12 @@ export async function generateTojeong(
 - 중괘(中卦): ${gweResult.middleGwe}번 — ${middleGweMeaning}
 - 하괘(下卦): ${gweResult.lowerGwe}번 — ${lowerGweMeaning}
 - 괘 코드: ${gweResult.gweCode}
+
+사주 용신/기신:
+- 용신: ${yongshinTJ.yongshinFull} (${yongshinTJ.reason})
+- 기신: ${yongshinTJ.heukshin}
+- 상괘 오행: ${upperGweElement}
+[용신↔상괘 오행 교차 판정]: ${yongshinGweNote}
 
 삼재(三災) 여부: ${samjae.isSamjae ? `${samjae.type} — ${samjae.description}` : '해당 없음'}${samjae.isSamjae ? `\n⚠️ 삼재 해당: yearFortune·caution에 삼재 종류(${samjae.type})를 명시하고, quarterFortune score를 -5~10점 하향하세요.` : ''}
 

@@ -208,8 +208,26 @@ export default function SajuCard({ saju, analysis }: SajuCardProps) {
         </motion.div>
       )}
 
+      {/* 격국(格局) */}
+      {detailed.geokguk && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.57 }}
+          className="mt-4"
+        >
+          <h3 className="text-sm font-semibold text-purple-200 mb-2">🎯 격국(格局)</h3>
+          <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-indigo-500/15 border-indigo-500/30">
+            <span className="text-xs font-bold flex-shrink-0 text-indigo-300">{detailed.geokguk}</span>
+            <p className="text-xs text-white/70 leading-relaxed">
+              사주의 기본 틀로, 일간의 성향과 삶의 방향을 결정하는 핵심 구조입니다.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* 공망(空亡) */}
-      {detailed.gongmang && detailed.gongmang[0] !== '없음' && (
+      {detailed.gongmangPillars && detailed.gongmangPillars.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -217,13 +235,13 @@ export default function SajuCard({ saju, analysis }: SajuCardProps) {
           className="mt-4"
         >
           <h3 className="text-sm font-semibold text-purple-200 mb-2">🕳️ 공망(空亡)</h3>
-          <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-slate-500/15 border-slate-500/30">
-            <span className="text-xs font-bold flex-shrink-0 text-slate-300">
-              {detailed.gongmang[0]}·{detailed.gongmang[1]}
-            </span>
-            <p className="text-xs text-white/70 leading-relaxed">
-              일주 기준 공망 지지입니다. 해당 지지에 해당하는 육친·분야의 작용이 약화되며, 역설적으로 정신·종교·학문적 소질로 승화될 수 있습니다.
-            </p>
+          <div className="space-y-1.5">
+            {detailed.gongmangPillars.map((gp, i) => (
+              <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg border bg-slate-500/15 border-slate-500/30">
+                <span className="text-xs font-bold flex-shrink-0 text-slate-300">{gp.label} {gp.ji}</span>
+                <p className="text-xs text-white/70 leading-relaxed">{gp.meaning}</p>
+              </div>
+            ))}
           </div>
         </motion.div>
       )}
