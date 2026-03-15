@@ -110,7 +110,71 @@ const MAJOR_UPRIGHT: Record<string, string> = {
   'the-world':         '완성, 통합, 성취, 세계와의 연결, 여정의 완성',
 }
 
-// Minor Arcana 수트별 정방향 기본 키워드
+// Minor Arcana 카드별 개별 정방향 키워드 (56장)
+const MINOR_UPRIGHT: Record<string, string> = {
+  // ── Wands (완드) ───────────────────────────────────────────
+  'ace-of-wands':    '새로운 시작, 창의적 불꽃, 열정의 씨앗, 영감, 잠재력',
+  'two-of-wands':    '계획과 비전, 먼 곳으로의 탐험, 진보, 결단, 개인 권력',
+  'three-of-wands':  '앞을 내다봄, 확장, 기회 포착, 성장, 해외 진출',
+  'four-of-wands':   '축하, 가정의 기쁨, 화합, 이정표 달성, 안정된 기반',
+  'five-of-wands':   '경쟁, 다양한 관점, 의견 충돌, 혼돈 속 성장, 활기찬 토론',
+  'six-of-wands':    '승리, 성공 인정, 리더십, 자신감, 공개적 성취',
+  'seven-of-wands':  '도전에 맞섬, 방어, 결의, 경쟁 우위, 자신감',
+  'eight-of-wands':  '빠른 행동, 소식과 여행, 에너지 집중, 속도, 명확한 방향',
+  'nine-of-wands':   '인내, 투지, 경계, 거의 다 왔다, 회복력',
+  'ten-of-wands':    '무거운 책임, 완성에 다가감, 짐의 무게, 헌신, 성실',
+  'page-of-wands':   '열정적 탐험, 영감 추구, 새로운 아이디어, 자유로운 영혼',
+  'knight-of-wands': '대담한 행동, 모험, 열정적 추진, 에너지, 충동적 도전',
+  'queen-of-wands':  '창의적 리더십, 자신감, 카리스마, 따뜻함, 사교적 힘',
+  'king-of-wands':   '창조적 비전, 기업가 정신, 영감적 권위, 개척, 선도',
+  // ── Cups (컵) ─────────────────────────────────────────────
+  'ace-of-cups':    '새로운 감정, 사랑의 선물, 직관의 시작, 영적 깨달음, 창의적 감성',
+  'two-of-cups':    '상호 끌림, 파트너십, 유대감, 로맨틱한 만남, 조화로운 결합',
+  'three-of-cups':  '우정과 축하, 커뮤니티, 창의적 협력, 행복한 모임',
+  'four-of-cups':   '내면 성찰, 재고와 명상, 새로운 기회 숙고, 권태 인식',
+  'five-of-cups':   '상실 후 회복, 남은 것에 집중, 슬픔 통과, 실망 후 재생',
+  'six-of-cups':    '과거의 향수, 순수한 기억, 어린 시절 선물, 추억과 화해',
+  'seven-of-cups':  '다양한 선택지, 상상력, 꿈과 현실 구분, 가능성 탐색',
+  'eight-of-cups':  '더 깊은 의미 탐색, 놓아줌, 용기 있는 이별, 새로운 여정',
+  'nine-of-cups':   '소원 성취, 만족, 풍요, 내면의 기쁨, 자기 만족',
+  'ten-of-cups':    '행복한 가정, 장기적 조화, 꿈의 실현, 영적 충만',
+  'page-of-cups':   '직관적 메시지, 감수성, 창의적 시작, 꿈 같은 아이디어',
+  'knight-of-cups': '낭만적 탐험, 감성적 추구, 이상주의, 예술적 열정',
+  'queen-of-cups':  '감성적 지혜, 직관, 공감, 따뜻한 리더십, 심리적 통찰',
+  'king-of-cups':   '감성적 균형, 지혜로운 조언, 외교, 침착함, 관용',
+  // ── Swords (검) ───────────────────────────────────────────
+  'ace-of-swords':    '명료한 진실, 지적 돌파, 새로운 아이디어, 결단, 정직',
+  'two-of-swords':    '교착 상태, 어려운 선택, 균형 모색, 일시적 정체',
+  'three-of-swords':  '상심과 슬픔, 고통스러운 진실, 배신, 치유의 시작',
+  'four-of-swords':   '휴식과 회복, 명상, 재충전, 치유의 시간, 일시적 후퇴',
+  'five-of-swords':   '갈등 후 결과, 긴장, 패배의 교훈, 속임수 경계',
+  'six-of-swords':    '평화로운 전환, 더 나은 곳으로 이동, 과도기, 정신적 안정',
+  'seven-of-swords':  '전략적 사고, 독립적 행동, 기지, 계획된 이탈',
+  'eight-of-swords':  '자기 제한 인식, 내면의 속박, 변화 필요, 두려움 직면',
+  'nine-of-swords':   '불안과 근심, 자기 비판, 정신적 고통, 악몽, 내면 갈등',
+  'ten-of-swords':    '고통스러운 결말, 위기의 끝, 새로운 시작 준비, 재기 신호',
+  'page-of-swords':   '호기심, 새로운 아이디어, 진실 탐구, 날카로운 관찰',
+  'knight-of-swords': '야망, 빠른 사고, 단호한 행동, 지적 탐구, 변화 추구',
+  'queen-of-swords':  '독립적 사고, 날카로운 지성, 명료한 판단, 직접적 소통',
+  'king-of-swords':   '지적 권위, 공정한 판단, 명확한 의사소통, 전략적 리더십',
+  // ── Pentacles (펜타클) ────────────────────────────────────
+  'ace-of-pentacles':    '물질적 기회, 번영의 씨앗, 새로운 사업, 안정의 시작',
+  'two-of-pentacles':    '균형 잡기, 다양한 우선순위 관리, 유연성, 적응력',
+  'three-of-pentacles':  '협력과 팀워크, 기술 연마, 계획 실행, 함께 만드는 성취',
+  'four-of-pentacles':   '안정 추구, 재정 관리, 현상 유지, 보수적 접근',
+  'five-of-pentacles':   '역경 속 회복력, 재정적 어려움, 도움 필요, 내면의 힘',
+  'six-of-pentacles':    '나눔과 관대함, 공정한 거래, 자선, 물질적 균형',
+  'seven-of-pentacles':  '인내와 장기 투자, 성과 평가, 지속적 노력, 기다림의 지혜',
+  'eight-of-pentacles':  '기술 개발, 장인 정신, 근면, 꾸준한 노력, 전문성',
+  'nine-of-pentacles':   '자립과 풍요, 물질적 독립, 성취의 결실, 자기 만족',
+  'ten-of-pentacles':    '물질적 완성, 가문의 번영, 세대 간 유산, 장기 안정',
+  'page-of-pentacles':   '배움의 시작, 현실적 목표, 야망, 신중한 계획',
+  'knight-of-pentacles': '신뢰성, 꾸준한 진행, 인내, 체계적 접근, 성실한 노력',
+  'queen-of-pentacles':  '실용적 지혜, 풍요, 안정적 리더십, 현실적 판단, 돌봄',
+  'king-of-pentacles':   '재정적 성취, 사업 성공, 현실적 권위, 물질적 안정, 풍요',
+}
+
+// Minor Arcana 수트별 정방향 기본 키워드 (개별 정의가 없는 경우 폴백)
 const SUIT_UPRIGHT: Record<string, string> = {
   'wands':     '열정, 창조, 의지, 행동, 영감, 추진력',
   'cups':      '감정, 직관, 관계, 사랑, 풍요로운 감성',
@@ -120,6 +184,7 @@ const SUIT_UPRIGHT: Record<string, string> = {
 
 function getUprightKeywords(id: string): string {
   if (MAJOR_UPRIGHT[id]) return MAJOR_UPRIGHT[id]
+  if (MINOR_UPRIGHT[id]) return MINOR_UPRIGHT[id]
   for (const [suit, keywords] of Object.entries(SUIT_UPRIGHT)) {
     if (id.includes(suit)) return keywords
   }
@@ -272,7 +337,7 @@ export const majorArcana: TarotCard[] = allCards.filter(c => MAJOR_SYMBOLS[c.id]
 export const minorArcana: TarotCard[] = allCards.filter(c => !MAJOR_SYMBOLS[c.id])
 
 /**
- * 무작위 타로 카드 뽑기 (역방향 50% 확률 포함)
+ * 무작위 타로 카드 뽑기 (역방향 33% 확률 포함 — 전통 타로 기준 ~1/3)
  */
 export function getRandomCards(count: number): TarotCard[] {
   const drawn = tarotapDraw(count, false, 'ko')
@@ -280,7 +345,7 @@ export function getRandomCards(count: number): TarotCard[] {
     const base = allCards.find(a => a.id === c.id)!
     return {
       ...base,
-      isReversed: Math.random() < 0.5,
+      isReversed: Math.random() < 0.33,
     }
   })
 }

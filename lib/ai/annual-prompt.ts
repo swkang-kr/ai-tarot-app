@@ -1,6 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
-import { getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars, getYongshin, getSipseong } from '@/lib/utils/saju'
+import { getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars, getYongshin, getSipseong, getSipiuUnsung } from '@/lib/utils/saju'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 
 export interface MonthFortune {
@@ -66,6 +66,14 @@ const SYSTEM_PROMPT = `당신은 20년 경력의 사주팔자 전문가입니다
 - fieldScores의 love/wealth/career/health 각각 0-100 정수 (전체 score와 상관관계 있게)
 - bestMonth/worstMonth/lovePeak/wealthPeak/careerPeak은 1-12 정수
 - 실제 사주 분석에 기반한 차별화된 월별 운세
+
+[luckyDay 판정 기준 — 월 내 길일 2개 선정]
+아래 우선순위 기준으로 각 달의 길일을 선정하세요:
+1순위: 해당 월 내 용신(用神) 오행 일진 날짜 (천간 또는 지지 오행이 용신과 일치)
+2순위: 해당 월 내 일진 지지가 사용자 일지(日支)와 육합(六合)이 되는 날
+3순위: 해당 월 내 일진 천간이 사용자 일간(日干)과 천간합(天干合)이 되는 날
+4순위: 위 조건 없으면 해당 월 score가 높은 달의 임의 2일 (예: 7일, 21일 형식)
+- 우선순위 기준이 충족되면 구체적 날짜(예: "12일, 27일")로 명시, 없으면 길한 숫자 기준 2일 선정
 
 [분야별 fieldScores 산정 원칙 — 십성(十星) 기반]
 재물운(wealth):
@@ -159,11 +167,17 @@ export async function generateAnnualReading(
 - 격국(格局): ${detail.geokguk}
 - 강한 오행: ${detail.dominantElement} / 약한 오행: ${detail.weakElement}
 - 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+- 희신(喜神): ${yongshin.heungshin}
 - 기신(忌神): ${yongshin.heukshin}
 
-[월별 fieldScores 산정 추가 기준 — 용신/기신 오행]
-- 해당 달 월운 천간·지지 오행이 용신(${yongshin.yongshin}) 오행이면 해당 분야 +5~10점
-- 기신(${yongshin.heukshin}) 오행이면 해당 분야 -5~10점
+[월별 fieldScores 산정 추가 기준 — 용신/기신 오행 분야별 가중치]
+아래 월운 목록의 [용신달(+8점)] 레이블 달 → 분야별 조정:
+  · wealth: +10점 (용신 오행이 재물 흐름 강화)
+  · career: +8점 (용신 오행이 사회 활동 지원)
+  · love: +${genderNote === '여성' ? '10점 (관성 기운이 이성 에너지와 공명)' : '8점 (재성 기운이 이성 에너지와 공명)'}
+  · health: +5점 (오행 균형 개선으로 활력)
+[기신달(-8점)] 레이블 달 → 분야별 조정:
+  · wealth: -8점 / career: -8점 / love: -6점 / health: -5점
 
 십성(十星) 및 십이운성 구성:
 ${detail.pillarsDetail.filter(p => p.hangul).map(p => `- ${p.label}: ${p.hangul} → 십성(${p.sipseong || '일간'}), 십이운성(${p.sipiunsung || '없음'})`).join('\n')}
@@ -214,6 +228,15 @@ ${detail.specialRelations.length > 0 ? detail.specialRelations.map(r => `- ${r.t
   const YUKHAP_PAIRS_A: [string, string][] = [
     ['자', '축'], ['인', '해'], ['묘', '술'], ['진', '유'], ['사', '신'], ['오', '미'],
   ]
+  // 천간합(天干合) · 천간충(天干冲) 상수
+  const CHEONGAN_HAP_PAIRS_A: [string, string][] = [
+    ['갑', '기'], ['을', '경'], ['병', '신'], ['정', '임'], ['무', '계'],
+  ]
+  const CHEONGAN_CHUNG_PAIRS_A: [string, string][] = [
+    ['갑', '경'], ['을', '신'], ['병', '임'], ['정', '계'],
+  ]
+  const allUserGanA = [saju.yearPillar[0], saju.monthPillar[0], saju.dayPillar[0], ...(saju.hourPillar ? [saju.hourPillar[0]] : [])]
+  const gongmangJiListA = detail?.gongmangPillars?.map((p: { ji: string }) => p.ji) || (detail?.gongmang ? [...detail.gongmang] : [])
   const monthPillars = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1
     const ms = calculateSaju(targetYear, m, 20)
@@ -249,6 +272,21 @@ ${detail.specialRelations.length > 0 ? detail.specialRelations.map(r => `- ${r.t
       adjParts.push('자묘형(-4점)')
     if (['오', '진', '유', '해'].includes(mJi) && allUserJiA.includes(mJi))
       adjParts.push('자형(-3점)')
+    // 월간 천간합·충 사전 계산 — 사주 원국 천간과 비교
+    const mGan = mp[0]
+    const ganHapMatch = allUserGanA.find(ug => CHEONGAN_HAP_PAIRS_A.some(([a, b]) => (mGan === a && ug === b) || (mGan === b && ug === a)))
+    const ganChungMatch = allUserGanA.find(ug => CHEONGAN_CHUNG_PAIRS_A.some(([a, b]) => (mGan === a && ug === b) || (mGan === b && ug === a)))
+    if (ganHapMatch) adjParts.push(`천간합(${mGan}${ganHapMatch},+5점)`)
+    if (ganChungMatch) adjParts.push(`천간충(${mGan}↔${ganChungMatch},-8점)`)
+    // 공망달(-5점) / 공망 해소(+3점)
+    if (gongmangJiListA.includes(mJi)) {
+      adjParts.push('공망달(-5점)')
+    } else {
+      const resolvesA = gongmangJiListA.filter((gji: string) =>
+        CHUNG_PAIRS_A.some(([a, b]) => (mJi === a && gji === b) || (mJi === b && gji === a))
+      )
+      if (resolvesA.length > 0) adjParts.push('공망해소(+3점)')
+    }
     // 용신/기신 오행 사전 계산 — fieldScores 조정 기준
     if (yongshinForMonth) {
       const ganElA = GAN_EL_A[mp[0]] || ''
@@ -313,6 +351,18 @@ ${monthPillars.join('\n')}
 - 대운 방향: ${daeunDirection}
 - 대운 시작 나이: ${daeunStart}세${currentDaeun ? `\n- 현재 대운(${targetYear}년 기준): ${currentDaeun.pillar}(${currentDaeun.hanja}) — ${currentDaeun.age}세 대운\n  · 천간기(前5년): ${currentDaeun.age}~${currentDaeun.age + 4}세 (${currentDaeun.pillar[0]}천간 영향, 사회·외부 운)\n  · 지지기(後5년): ${currentDaeun.age + 5}~${currentDaeun.age + 9}세 (${currentDaeun.pillar[1]}지지 영향, 내면·가정 운)` : ''}${nextDaeun ? `\n- 다음 대운: ${nextDaeun.pillar}(${nextDaeun.hanja}) — ${nextDaeun.age}세부터` : ''}
 
+[세운 천간 × 대운 천간 교차분석 — 코드 계산값]
+${(() => {
+  const seunGanA = seunPillar[0]
+  const daeunGanA = currentDaeun?.pillar[0]
+  if (!daeunGanA) return '  · 대운 정보 없음'
+  const isHap = CHEONGAN_HAP_PAIRS_A.some(([a, b]) => (seunGanA === a && daeunGanA === b) || (seunGanA === b && daeunGanA === a))
+  const isChung = CHEONGAN_CHUNG_PAIRS_A.some(([a, b]) => (seunGanA === a && daeunGanA === b) || (seunGanA === b && daeunGanA === a))
+  if (isHap) return `  ✅ 세운 천간(${seunGanA}) × 대운 천간(${daeunGanA}): 천간합 — 큰 흐름 상호 협력, yearSummary +5점 기준`
+  if (isChung) return `  ⚠️ 세운 천간(${seunGanA}) × 대운 천간(${daeunGanA}): 천간충 — 내외 흐름 충돌, yearSummary -8점 기준`
+  return `  · 세운 천간(${seunGanA}) × 대운 천간(${daeunGanA}): 합충 없음`
+})()}
+
 세운·월운·대운의 교차 분석을 반영하여 월별 운세를 산출해주세요.
 
 [운세 가중치 원칙]
@@ -347,26 +397,13 @@ ${monthPillars.join('\n')}
 ${(() => {
   const GAN_HANJA_B: Record<string, string> = { '갑': '甲', '을': '乙', '병': '丙', '정': '丁', '무': '戊', '기': '己', '경': '庚', '신': '辛', '임': '壬', '계': '癸' }
   const JI_HANJA_B: Record<string, string> = { '자': '子', '축': '丑', '인': '寅', '묘': '卯', '진': '辰', '사': '巳', '오': '午', '미': '未', '신': '申', '유': '酉', '술': '戌', '해': '亥' }
-  const SIPIU: Record<string, Record<string, string>> = {
-    '갑': { '해': '장생', '자': '목욕', '축': '관대', '인': '임관', '묘': '제왕', '진': '쇠', '사': '병', '오': '사', '미': '묘', '신': '절', '유': '태', '술': '양' },
-    '을': { '오': '장생', '사': '목욕', '진': '관대', '묘': '임관', '인': '제왕', '축': '쇠', '자': '병', '해': '사', '술': '묘', '유': '절', '신': '태', '미': '양' },
-    '병': { '인': '장생', '묘': '목욕', '진': '관대', '사': '임관', '오': '제왕', '미': '쇠', '신': '병', '유': '사', '술': '묘', '해': '절', '자': '태', '축': '양' },
-    '무': { '인': '장생', '묘': '목욕', '진': '관대', '사': '임관', '오': '제왕', '미': '쇠', '신': '병', '유': '사', '술': '묘', '해': '절', '자': '태', '축': '양' },
-    '정': { '유': '장생', '신': '목욕', '미': '관대', '오': '임관', '사': '제왕', '진': '쇠', '묘': '병', '인': '사', '축': '묘', '자': '절', '해': '태', '술': '양' },
-    '기': { '유': '장생', '신': '목욕', '미': '관대', '오': '임관', '사': '제왕', '진': '쇠', '묘': '병', '인': '사', '축': '묘', '자': '절', '해': '태', '술': '양' },
-    '경': { '사': '장생', '오': '목욕', '미': '관대', '신': '임관', '유': '제왕', '술': '쇠', '해': '병', '자': '사', '축': '묘', '인': '절', '묘': '태', '진': '양' },
-    '신': { '자': '장생', '해': '목욕', '술': '관대', '유': '임관', '신': '제왕', '미': '쇠', '오': '병', '사': '사', '진': '묘', '묘': '절', '인': '태', '축': '양' },
-    '임': { '신': '장생', '유': '목욕', '술': '관대', '해': '임관', '자': '제왕', '축': '쇠', '인': '병', '묘': '사', '진': '묘', '사': '절', '오': '태', '미': '양' },
-    '계': { '묘': '장생', '인': '목욕', '축': '관대', '자': '임관', '해': '제왕', '술': '쇠', '유': '병', '신': '사', '미': '묘', '오': '절', '사': '태', '진': '양' },
-  }
   const dayGan = detail.dayMaster.name[0]
-  const sipuTable = SIPIU[dayGan] || {}
   return Array.from({ length: 12 }, (_, i) => {
     const m = i + 1
     const ms = (() => { try { return calculateSaju(targetYear, m, 20) } catch { return null } })()
     if (!ms) return ''
     const ji = ms.monthPillar[1]
-    const unsung = sipuTable[ji] || '불명'
+    const unsung = getSipiuUnsung(dayGan, ji)
     const strength = unsung === '제왕' ? '★★★절정운' : unsung === '임관' ? '★★상승운' : ['장생', '관대'].includes(unsung) ? '★좋음' : unsung === '쇠' ? '△소강' : ['묘', '절'].includes(unsung) ? '▼▼정체주의' : ['병', '사'].includes(unsung) ? '▼하향주의' : ''
     return `  · ${m}월(${ms.monthPillar}): 십이운성 ${unsung}(${JI_HANJA_B[ji] || ''}) ${strength}`
   }).filter(Boolean).join('\n')

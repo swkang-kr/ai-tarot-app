@@ -1,6 +1,6 @@
 import { anthropic } from '@/lib/ai/client'
 import type { SajuInfo, SajuDetailedAnalysis } from '@/lib/utils/saju'
-import { calculateDaeunStartAge, calculateDaeunPillars, getYongshin, getSipseong } from '@/lib/utils/saju'
+import { calculateDaeunStartAge, calculateDaeunPillars, getYongshin, getSipseong, getSipiuUnsung } from '@/lib/utils/saju'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 
 export interface ManseryeokResponse {
@@ -93,7 +93,11 @@ const SYSTEM_PROMPT = `당신은 30년 경력의 사주명리 전문가입니다
 - score는 모두 0-100 정수
 - 실제 사주 원국과 대운 계산 원리에 기반하여 분석
 - 대운 분석 시 반드시 천간기(前5年)·지지기(後5年) 구분:
-  예) "갑인 대운 35-39세: 甲(갑, 목) 천간기 — 인성 활성화, 학문·자격 유리 / 40-44세: 寅(인, 목) 지지기 — 실제 행동·이동 활발"`
+  예) "갑인 대운 35-39세: 甲(갑, 목) 천간기 — 인성 활성화, 학문·자격 유리 / 40-44세: 寅(인, 목) 지지기 — 실제 행동·이동 활발"
+- 대운 교체기(境界期) 경고: 현재 나이가 현재 대운 종료 -1년 ~ +1년 이내이면 monthlyFlow에 다음 경고를 추가
+  · 다음 대운 천간이 기신(忌神) 또는 일간과 충(冲)이면: 해당 달 score -5점 추가, advice에 "대운 교체기 혼란 주의" 명시
+  · 다음 대운 천간이 용신(用神) 또는 일간과 합(合)이면: 해당 달 score +3점 추가, advice에 "새 대운 상승 기운 활용" 명시
+  · 교체기 앞뒤 2개월(현 대운 마지막 달·다음 대운 첫 달)은 score를 ±3 추가 보정`
 
 export async function generateManseryeok(
   birthDate: string,
@@ -153,6 +157,15 @@ export async function generateManseryeok(
   }
   const yongshinShortM = yongshin?.yongshin || ''
   const heukshinShortM = yongshin?.heukshin.split('(')[0] || ''
+  // 천간합(天干合) · 천간충(天干冲) 상수
+  const CHEONGAN_HAP_M: [string, string][] = [
+    ['갑', '기'], ['을', '경'], ['병', '신'], ['정', '임'], ['무', '계'],
+  ]
+  const CHEONGAN_CHUNG_M: [string, string][] = [
+    ['갑', '경'], ['을', '신'], ['병', '임'], ['정', '계'],
+  ]
+  const allUserGanM = [saju.yearPillar[0], saju.monthPillar[0], saju.dayPillar[0], ...(saju.hourPillar ? [saju.hourPillar[0]] : [])]
+  const gongmangJiListM = detail?.gongmangPillars?.map((p: { ji: string }) => p.ji) || (detail?.gongmang ? [...detail.gongmang] : [])
   // 형(刑) 사전 계산용 사용자 지지 목록
   const allUserJiM = [saju.yearPillar[1], saju.monthPillar[1], saju.dayPillar[1], ...(saju.hourPillar ? [saju.hourPillar[1]] : [])]
   const SAMHYEONG_M: string[][] = [['인', '신', '사'], ['축', '술', '미']]
@@ -182,6 +195,21 @@ export async function generateManseryeok(
     }
     if ((mJi === '자' && allUserJiM.includes('묘')) || (mJi === '묘' && allUserJiM.includes('자'))) adjNotes.push('자묘형(-4점)')
     if (['오', '진', '유', '해'].includes(mJi) && allUserJiM.includes(mJi)) adjNotes.push('자형(-3점)')
+    // 월간 천간합·충 사전 계산
+    const mGanM = ms.monthPillar[0]
+    const ganHapMatchM = allUserGanM.find(ug => CHEONGAN_HAP_M.some(([a, b]) => (mGanM === a && ug === b) || (mGanM === b && ug === a)))
+    const ganChungMatchM = allUserGanM.find(ug => CHEONGAN_CHUNG_M.some(([a, b]) => (mGanM === a && ug === b) || (mGanM === b && ug === a)))
+    if (ganHapMatchM) adjNotes.push(`천간합(${mGanM}${ganHapMatchM},+5점)`)
+    if (ganChungMatchM) adjNotes.push(`천간충(${mGanM}↔${ganChungMatchM},-8점)`)
+    // 공망달(-5점) / 공망 해소(+3점)
+    if (gongmangJiListM.includes(mJi)) {
+      adjNotes.push('공망달(-5점)')
+    } else {
+      const resolvesM = gongmangJiListM.filter((gji: string) =>
+        CHUNG_M.some(([a, b]) => (mJi === a && gji === b) || (mJi === b && gji === a))
+      )
+      if (resolvesM.length > 0) adjNotes.push('공망해소(+3점)')
+    }
     const adjStr = adjNotes.length > 0 ? ` [${adjNotes.join(' ')}]` : ''
     return `  · ${m}월: ${ms.monthPillar}(${ms.monthPillarHanja})${adjStr}`
   })
@@ -207,6 +235,17 @@ ${daeunPillars.map(d => `  · ${d.age}세 대운: ${d.pillar}(${d.hanja})`).join
    세운 천간 십성: 일간 ${saju.dayPillar[0]} 기준 세운 천간 ${seunPillarM[0]}는 → ${getSipseong(saju.dayPillar[0], seunPillarM[0])}
    (세운 십성 의미: 편재년=재물기회·변화·대인운, 정관년=안정·승진·명예, 편관년=도전·압박·변화, 식신년=결실·여유·건강, 인성년=학문·귀인·내실)
    세운 지지 ${seunPillarM[1]}와 일지 ${saju.dayPillar[1]}의 충합 관계를 분석하여 올해 핵심 테마와 advice를 서술하세요.
+   [세운 천간 × 대운 천간 교차분석]:
+   ${(() => {
+     const seunGanM = seunPillarM[0]
+     const daeunGanM = daeunPillars.findLast(d => d.age <= currentAge)?.pillar[0]
+     if (!daeunGanM) return '  · 대운 정보 없음'
+     const isHap = CHEONGAN_HAP_M.some(([a, b]) => (seunGanM === a && daeunGanM === b) || (seunGanM === b && daeunGanM === a))
+     const isChung = CHEONGAN_CHUNG_M.some(([a, b]) => (seunGanM === a && daeunGanM === b) || (seunGanM === b && daeunGanM === a))
+     if (isHap) return `세운 천간(${seunGanM}) × 대운 천간(${daeunGanM}): 천간합 — 큰 흐름 상호 협력, currentSeun advice +5점 기준`
+     if (isChung) return `세운 천간(${seunGanM}) × 대운 천간(${daeunGanM}): 천간충 — 내외 흐름 충돌, currentSeun advice -8점 기준`
+     return `세운 천간(${seunGanM}) × 대운 천간(${daeunGanM}): 합충 없음`
+   })()}
 3. ${targetYear}년 월운 (月運) — 아래 사전 계산된 월운 간지를 그대로 monthlyFlow.ganji에 사용하세요:
 ${monthlyPillarsM.join('\n')}
 ${yongshin ? `[월운 score 산정 기준 — 용신/기신 오행 + 충합 반영]
@@ -228,6 +267,7 @@ ${detail ? `
 - 격국: ${detail.geokguk}
 - 강한 오행: ${detail.dominantElement} / 약한 오행: ${detail.weakElement}
 - 용신(用神): ${yongshin?.yongshinFull} — ${yongshin?.reason}
+- 희신(喜神): ${yongshin?.heungshin}
 - 기신(忌神): ${yongshin?.heukshin}
 - 신살: ${detail.sinsal.length > 0 ? detail.sinsal.map(s => s.name).join(', ') : '없음'}
 - 공망: ${detail.gongmang ? `${detail.gongmang[0]}·${detail.gongmang[1]}` : '없음'}
@@ -235,21 +275,9 @@ ${detail ? `
 [십이운성(十二運星) 기반 대운 강약 판정 — 일간 ${detail.dayMaster.name} 기준]
 대운 지지의 십이운성이 제왕(帝旺)·임관(臨官)이면 강운 대운, 묘(墓)·절(絶)·병(病)·사(死)이면 주의 대운:
 ${daeunPillars.slice(0, 6).map(d => {
-  const SIPIU: Record<string, Record<string, string>> = {
-    '갑': { '해': '장생', '자': '목욕', '축': '관대', '인': '임관', '묘': '제왕', '진': '쇠', '사': '병', '오': '사', '미': '묘', '신': '절', '유': '태', '술': '양' },
-    '을': { '오': '장생', '사': '목욕', '진': '관대', '묘': '임관', '인': '제왕', '축': '쇠', '자': '병', '해': '사', '술': '묘', '유': '절', '신': '태', '미': '양' },
-    '병': { '인': '장생', '묘': '목욕', '진': '관대', '사': '임관', '오': '제왕', '미': '쇠', '신': '병', '유': '사', '술': '묘', '해': '절', '자': '태', '축': '양' },
-    '무': { '인': '장생', '묘': '목욕', '진': '관대', '사': '임관', '오': '제왕', '미': '쇠', '신': '병', '유': '사', '술': '묘', '해': '절', '자': '태', '축': '양' },
-    '정': { '유': '장생', '신': '목욕', '미': '관대', '오': '임관', '사': '제왕', '진': '쇠', '묘': '병', '인': '사', '축': '묘', '자': '절', '해': '태', '술': '양' },
-    '기': { '유': '장생', '신': '목욕', '미': '관대', '오': '임관', '사': '제왕', '진': '쇠', '묘': '병', '인': '사', '축': '묘', '자': '절', '해': '태', '술': '양' },
-    '경': { '사': '장생', '오': '목욕', '미': '관대', '신': '임관', '유': '제왕', '술': '쇠', '해': '병', '자': '사', '축': '묘', '인': '절', '묘': '태', '진': '양' },
-    '신': { '자': '장생', '해': '목욕', '술': '관대', '유': '임관', '신': '제왕', '미': '쇠', '오': '병', '사': '사', '진': '묘', '묘': '절', '인': '태', '축': '양' },
-    '임': { '신': '장생', '유': '목욕', '술': '관대', '해': '임관', '자': '제왕', '축': '쇠', '인': '병', '묘': '사', '진': '묘', '사': '절', '오': '태', '미': '양' },
-    '계': { '묘': '장생', '인': '목욕', '축': '관대', '자': '임관', '해': '제왕', '술': '쇠', '유': '병', '신': '사', '미': '묘', '오': '절', '사': '태', '진': '양' },
-  }
   const dayGan = detail.dayMaster.name[0]
   const ji = d.pillar[1]
-  const unsung = (SIPIU[dayGan] || {})[ji] || '불명'
+  const unsung = getSipiuUnsung(dayGan, ji)
   const mark = unsung === '제왕' ? ' ★★★절정운' : unsung === '임관' ? ' ★★상승운' : ['장생', '관대'].includes(unsung) ? ' ★좋음' : unsung === '쇠' ? ' △소강' : ['묘', '절'].includes(unsung) ? ' ▼▼정체주의' : ['병', '사'].includes(unsung) ? ' ▼하향주의' : ''
   const ganSipseongM = getSipseong(dayGan, d.pillar[0])
   return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark} / 천간십성 ${ganSipseongM}`

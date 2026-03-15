@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     // user may be null — continue regardless for anonymous access
 
-    const { dreamContent, category } = await req.json()
+    const { dreamContent, category, dreamTime } = await req.json()
 
     if (!dreamContent || typeof dreamContent !== 'string' || dreamContent.trim().length < 10) {
       return NextResponse.json(
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate dream reading
-    const reading = await generateDreamReading(dreamContent.trim(), category || undefined)
+    const reading = await generateDreamReading(dreamContent.trim(), category || undefined, typeof dreamTime === 'string' ? dreamTime : undefined)
 
     // Only save to DB if logged in
     if (user) {

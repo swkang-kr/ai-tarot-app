@@ -1,7 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getDetailedAnalysis, getYongshin, getSipseong, calculateDaeunStartAge, calculateDaeunPillars, getSamjae, getYearJi } from '@/lib/utils/saju'
+import { getDetailedAnalysis, getYongshin, getSipseong, calculateDaeunStartAge, calculateDaeunPillars, getSamjae, getYearJi, getSipiuUnsung } from '@/lib/utils/saju'
 
 export interface WealthSajuResponse {
   wealthType: string             // 재물 유형 (예: "흘러들어오는 수형 💧")
@@ -94,23 +94,11 @@ export async function generateWealthSaju(
     : []
 
   // 십이운성 기반 대운 재물운 강약 판정
-  const SIPIU_W: Record<string, Record<string, string>> = {
-    '갑': {'해':'장생','자':'목욕','축':'관대','인':'임관','묘':'제왕','진':'쇠','사':'병','오':'사','미':'묘','신':'절','유':'태','술':'양'},
-    '을': {'오':'장생','사':'목욕','진':'관대','묘':'임관','인':'제왕','축':'쇠','자':'병','해':'사','술':'묘','유':'절','신':'태','미':'양'},
-    '병': {'인':'장생','묘':'목욕','진':'관대','사':'임관','오':'제왕','미':'쇠','신':'병','유':'사','술':'묘','해':'절','자':'태','축':'양'},
-    '무': {'인':'장생','묘':'목욕','진':'관대','사':'임관','오':'제왕','미':'쇠','신':'병','유':'사','술':'묘','해':'절','자':'태','축':'양'},
-    '정': {'유':'장생','신':'목욕','미':'관대','오':'임관','사':'제왕','진':'쇠','묘':'병','인':'사','축':'묘','자':'절','해':'태','술':'양'},
-    '기': {'유':'장생','신':'목욕','미':'관대','오':'임관','사':'제왕','진':'쇠','묘':'병','인':'사','축':'묘','자':'절','해':'태','술':'양'},
-    '경': {'사':'장생','오':'목욕','미':'관대','신':'임관','유':'제왕','술':'쇠','해':'병','자':'사','축':'묘','인':'절','묘':'태','진':'양'},
-    '신': {'자':'장생','해':'목욕','술':'관대','유':'임관','신':'제왕','미':'쇠','오':'병','사':'사','진':'묘','묘':'절','인':'태','축':'양'},
-    '임': {'신':'장생','유':'목욕','술':'관대','해':'임관','자':'제왕','축':'쇠','인':'병','묘':'사','진':'묘','사':'절','오':'태','미':'양'},
-    '계': {'묘':'장생','인':'목욕','축':'관대','자':'임관','해':'제왕','술':'쇠','유':'병','신':'사','미':'묘','오':'절','사':'태','진':'양'},
-  }
   const dayGanW = detail.dayMaster.name[0]
   const daeunWealthNote = daeunPillarsW.length > 0
     ? `\n[대운(大運) 간지 + 십이운성 강약 — wealthTimeline score에 반영]\n` +
       daeunPillarsW.slice(0, 6).map(d => {
-        const unsung = (SIPIU_W[dayGanW] || {})[d.pillar[1]] || '불명'
+        const unsung = getSipiuUnsung(dayGanW, d.pillar[1])
         const mark = unsung === '제왕' ? ' ★★★재물 절정' : unsung === '임관' ? ' ★★재물 상승' : ['장생','관대'].includes(unsung) ? ' ★좋음' : ['묘','절'].includes(unsung) ? ' ▼▼재물 정체' : ['병','사'].includes(unsung) ? ' ▼재물 하향' : ''
         const ganSipseongW = getSipseong(dayGanW, d.pillar[0])
         return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark} / 천간십성 ${ganSipseongW}`
@@ -153,7 +141,7 @@ export async function generateWealthSaju(
     const s = calculateSaju(currentYear, m, 20)
     const sipseong = getSipseong(saju.dayPillar[0], s.monthPillar[0])
     const ji = s.monthPillar[1]
-    const unsung = (SIPIU_W[dayGanW] || {})[ji] || '불명'
+    const unsung = getSipiuUnsung(dayGanW, ji)
     const mark = unsung === '제왕' ? ' ★★★절정' : unsung === '임관' ? ' ★★상승' : ['장생', '관대'].includes(unsung) ? ' ★좋음' : ['묘', '절'].includes(unsung) ? ' ▼▼정체주의' : ['병', '사'].includes(unsung) ? ' ▼하향' : ''
     const ganElW = GAN_EL_W[s.monthPillar[0]] || ''
     const jiElW = JI_EL_W[ji] || ''
@@ -196,6 +184,7 @@ export async function generateWealthSaju(
 - 강한 오행: ${detail.dominantElement} / 약한 오행: ${detail.weakElement}
 - 십성 구성: ${sipseongSummary || '없음'}
 - 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+- 희신(喜神): ${yongshin.heungshin}
 - 기신(忌神): ${yongshin.heukshin}
 
 [재물운 판단 기준]

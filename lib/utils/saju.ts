@@ -382,6 +382,16 @@ const SIPIU_UNSUNG: Record<string, Record<string, string>> = {
   '계': { '묘': '장생(長生)', '인': '목욕(沐浴)', '축': '관대(冠帶)', '자': '임관(臨官)', '해': '제왕(帝旺)', '술': '쇠(衰)', '유': '병(病)', '신': '사(死)', '미': '묘(墓)', '오': '절(絶)', '사': '태(胎)', '진': '양(養)' },
 }
 
+/** 십이운성(十二運星) 단축명 반환 — 대운·월운 프롬프트 공통 사용
+ * @param dayGan 일간 천간 (갑·을·병...)
+ * @param ji 지지 (자·축·인...)
+ * @returns 단축 운성명 (장생·목욕·제왕... 또는 '불명')
+ */
+export function getSipiuUnsung(dayGan: string, ji: string): string {
+  const full = SIPIU_UNSUNG[dayGan]?.[ji] || ''
+  return full ? full.split('(')[0] : '불명'
+}
+
 // ────────────────────────────────────────────────────────────
 // 격국(格局) 계산 — 월지 지장간 본기(本氣) 기준
 // ────────────────────────────────────────────────────────────
@@ -593,41 +603,64 @@ export function getSinsalList(saju: SajuInfo): SinsalInfo[] {
     ...(saju.hourPillar ? [{ label: '시주', ji: saju.hourPillar[1] }] : []),
   ]
 
-  // 도화살
-  const dohwaJi = DOHWASAL_MAP[birthYearJi]
-  if (dohwaJi) {
-    const matching = pillarData.filter(p => p.ji === dohwaJi)
-    if (matching.length > 0) {
+  const dayJiForSinsal = saju.dayPillar[1]
+  // 도화살 — 년지 기준 + 일지 기준 병행 체크 (전통 명리학 표준)
+  {
+    const targetByYear = DOHWASAL_MAP[birthYearJi]
+    const targetByDay  = DOHWASAL_MAP[dayJiForSinsal]
+    const dohwaPillars: string[] = []
+    if (targetByYear) {
+      pillarData.filter(p => p.ji === targetByYear).forEach(p => { if (!dohwaPillars.includes(p.label)) dohwaPillars.push(p.label) })
+    }
+    if (targetByDay && targetByDay !== targetByYear) {
+      // 일지 기준: 나머지 주(년·월·시)에서만 체크 (일지 자신은 기준이므로 제외)
+      pillarData.filter(p => p.ji === targetByDay && p.label !== '일주').forEach(p => { if (!dohwaPillars.includes(p.label)) dohwaPillars.push(p.label) })
+    }
+    if (dohwaPillars.length > 0) {
       result.push({
         name: '도화살(桃花煞)',
         meaning: '이성에게 매력적이며 인기가 많습니다. 과도하면 이성 문제에 주의가 필요합니다.',
-        pillars: matching.map(p => p.label),
+        pillars: dohwaPillars,
       })
     }
   }
 
-  // 역마살
-  const yeokmaJi = YEOKMASAL_MAP[birthYearJi]
-  if (yeokmaJi) {
-    const matching = pillarData.filter(p => p.ji === yeokmaJi)
-    if (matching.length > 0) {
+  // 역마살 — 년지 기준 + 일지 기준 병행 체크
+  {
+    const targetByYear = YEOKMASAL_MAP[birthYearJi]
+    const targetByDay  = YEOKMASAL_MAP[dayJiForSinsal]
+    const yeokPillars: string[] = []
+    if (targetByYear) {
+      pillarData.filter(p => p.ji === targetByYear).forEach(p => { if (!yeokPillars.includes(p.label)) yeokPillars.push(p.label) })
+    }
+    if (targetByDay && targetByDay !== targetByYear) {
+      pillarData.filter(p => p.ji === targetByDay && p.label !== '일주').forEach(p => { if (!yeokPillars.includes(p.label)) yeokPillars.push(p.label) })
+    }
+    if (yeokPillars.length > 0) {
       result.push({
         name: '역마살(驛馬煞)',
         meaning: '이동·이사·출장·여행이 많습니다. 활동적이며 해외 인연도 있을 수 있습니다.',
-        pillars: matching.map(p => p.label),
+        pillars: yeokPillars,
       })
     }
   }
 
-  // 화개살
-  const hwagaeJi = HWAGAESAL_MAP[birthYearJi]
-  if (hwagaeJi) {
-    const matching = pillarData.filter(p => p.ji === hwagaeJi)
-    if (matching.length > 0) {
+  // 화개살 — 년지 기준 + 일지 기준 병행 체크
+  {
+    const targetByYear = HWAGAESAL_MAP[birthYearJi]
+    const targetByDay  = HWAGAESAL_MAP[dayJiForSinsal]
+    const hwagaePillars: string[] = []
+    if (targetByYear) {
+      pillarData.filter(p => p.ji === targetByYear).forEach(p => { if (!hwagaePillars.includes(p.label)) hwagaePillars.push(p.label) })
+    }
+    if (targetByDay && targetByDay !== targetByYear) {
+      pillarData.filter(p => p.ji === targetByDay && p.label !== '일주').forEach(p => { if (!hwagaePillars.includes(p.label)) hwagaePillars.push(p.label) })
+    }
+    if (hwagaePillars.length > 0) {
       result.push({
         name: '화개살(華蓋煞)',
         meaning: '예술·종교·학문적 기질이 강합니다. 고독함과 함께 탁월한 집중력을 가집니다.',
-        pillars: matching.map(p => p.label),
+        pillars: hwagaePillars,
       })
     }
   }
@@ -695,7 +728,7 @@ export function getSinsalList(saju: SajuInfo): SinsalInfo[] {
     })
   }
 
-  // 귀문관살 (사주 내 특정 지지 쌍)
+  // 귀문관살 (사주 내 특정 지지 쌍) — 다중 쌍 모두 검사
   const jijiSet = new Set(pillarData.map(p => p.ji))
   for (const [a, b] of GWIMUN_PAIRS) {
     if (jijiSet.has(a) && jijiSet.has(b)) {
@@ -705,7 +738,6 @@ export function getSinsalList(saju: SajuInfo): SinsalInfo[] {
         meaning: '직관력과 감수성이 뛰어나며 영적·예술적 소질이 있습니다. 신경이 예민하거나 강박적 성향이 나타날 수 있어 정신 건강에 주의하세요.',
         pillars: matchingPillars,
       })
-      break
     }
   }
 
@@ -1184,6 +1216,8 @@ export interface YongshinInfo {
   yongshin: string
   /** 용신 오행 전체명 (목(木) 등) */
   yongshinFull: string
+  /** 희신(喜神) — 용신을 생하여 간접적으로 돕는 오행 */
+  heungshin: string
   /** 기신(忌神) — 피해야 할 오행 */
   heukshin: string
   /** 구신(仇神) — 기신을 생하여 간접적으로 해를 끼치는 오행 */
@@ -1229,9 +1263,11 @@ export function getYongshin(saju: SajuInfo, detail: SajuDetailedAnalysis): Yongs
     // 종격 기신: 용신 오행을 극하는 오행 (억부론과 반대 구조)
     const jonggukHeuk = Object.entries(SANGGEUK).find(([, v]) => v === jonggukYongshin)?.[0] || ''
     const jonggukBoek = Object.entries(SANGSAENG).find(([, v]) => v === jonggukHeuk)?.[0] || ''
+    const jonggukHeung = Object.entries(SANGSAENG).find(([, v]) => v === jonggukYongshin)?.[0] || ''
     return {
       yongshin: jonggukYongshin,
       yongshinFull: ELEMENT_FULL[jonggukYongshin] || jonggukYongshin,
+      heungshin: ELEMENT_FULL[jonggukHeung] || jonggukHeung,
       heukshin: ELEMENT_FULL[jonggukHeuk] || jonggukHeuk,
       boekshin: ELEMENT_FULL[jonggukBoek] || jonggukBoek,
       reason: `종격(從格): ${detail.geokguk} — 가장 강한 오행에 순종, 억부론 배제`,
@@ -1262,6 +1298,29 @@ export function getYongshin(saju: SajuInfo, detail: SajuDetailedAnalysis): Yongs
     // 기신: 용신(약한 오행)을 극하는 오행
     heukshinShort = Object.entries(SANGGEUK).find(([, v]) => v === weakShort)?.[0] || ''
     reason = `중화(中和) → 가장 약한 ${ELEMENT_FULL[weakShort] || weakShort} 오행 보완`
+  }
+
+  // ── 1.5. 통관용신론(通關用神論) — 두 오행이 대립할 때 중재 오행 ───
+  // 억부론으로 중화 판정 후, 상위 2개 오행이 상극 관계일 경우 적용
+  // 통관용신: top1을 생하면서 동시에 top2를 적당히 연결하는 매개 오행
+  // 적용 조건: ① 중화(中和) 사주 ② 상위 2 오행이 서로 극(克) 관계
+  if (bodyStrength === '중화(中和)') {
+    const sorted2 = [...detail.elementBalanceWithJijanggan].sort((a, b) => b.count - a.count)
+    if (sorted2.length >= 2) {
+      const top1Short = ELEMENT_SHORT[sorted2[0].name] || ''
+      const top2Short = ELEMENT_SHORT[sorted2[1].name] || ''
+      // top1이 top2를 극하는지 확인 (SANGGEUK[top1] === top2)
+      if (top1Short && top2Short && SANGGEUK[top1Short] === top2Short) {
+        // 통관용신: top1을 생(生)하는 오행이 통관 역할
+        // top1을 생하는 오행 = SANGSAENG의 역관계 (누가 top1을 생하는가)
+        const tongkwan = Object.entries(SANGSAENG).find(([, v]) => v === top1Short)?.[0] || ''
+        if (tongkwan) {
+          yongshinShort = tongkwan
+          heukshinShort = Object.entries(SANGGEUK).find(([, v]) => v === tongkwan)?.[0] || heukshinShort
+          reason = `통관용신론(通關用神論): ${ELEMENT_FULL[top1Short]}↔${ELEMENT_FULL[top2Short]} 대립 → ${ELEMENT_FULL[tongkwan] || tongkwan}으로 중재`
+        }
+      }
+    }
   }
 
   // ── 2. 조후론(調候論) 보정 — 극단 계절 우선 ─────────────────
@@ -1304,13 +1363,34 @@ export function getYongshin(saju: SajuInfo, detail: SajuDetailedAnalysis): Yongs
     heukshinShort = '화'
     reason = `조후론 보조: 초가을(申月) 신약 목(木) — 수(水) 인성으로 보강`
   }
+  // 진월(辰月, 3월): 토기가 성하고 한습 잔존 — 수·금·토 일간 화(火) 조후
+  if (monthJi === '진' && ['수', '금', '토'].includes(dayShort)) {
+    yongshinShort = '화'
+    heukshinShort = '수'
+    reason = `조후론 보조: 봄(辰月) 한습 잔존 — 화(火)로 온기 보완`
+  }
+  // 미월(未月, 6월): 여름 삼복더위(三伏) 근접 — 목·화·토·금 일간 수(水) 조후
+  if (monthJi === '미' && ['목', '화', '토', '금'].includes(dayShort)) {
+    yongshinShort = '수'
+    heukshinShort = '화'
+    reason = `조후론 보조: 여름(未月) 삼복 더위 — 수(水)로 조열(燥熱) 해소`
+  }
+  // 술월(戌月, 9월): 秋土 건조 — 화·목 일간 수(水) 조후
+  if (monthJi === '술' && ['화', '목'].includes(dayShort)) {
+    yongshinShort = '수'
+    heukshinShort = '화'
+    reason = `조후론 보조: 가을(戌月) 건조 — 수(水)로 조열 해소`
+  }
 
   // 구신(仇神): 기신(忌神)을 생하는 오행 — 간접적으로 해를 끼침
   const boekshinShort = Object.entries(SANGSAENG).find(([, v]) => v === heukshinShort)?.[0] || ''
+  // 희신(喜神): 용신을 생하는 오행 — 간접적으로 용신을 도움
+  const heungshinShort = Object.entries(SANGSAENG).find(([, v]) => v === yongshinShort)?.[0] || ''
 
   return {
     yongshin: yongshinShort,
     yongshinFull: ELEMENT_FULL[yongshinShort] || yongshinShort,
+    heungshin: ELEMENT_FULL[heungshinShort] || heungshinShort,
     heukshin: ELEMENT_FULL[heukshinShort] || heukshinShort,
     boekshin: ELEMENT_FULL[boekshinShort] || boekshinShort,
     reason,

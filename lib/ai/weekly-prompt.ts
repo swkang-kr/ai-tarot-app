@@ -75,7 +75,9 @@ const SYSTEM_PROMPT = `당신은 20년 경력의 사주팔자 전문가입니다
 중요:
 - days 배열은 월~일 7개 항목, 각 날짜는 실제 이번 주 날짜
 - score는 0-100 정수, 사주와 날짜 천간지지 조합으로 산출
-- bestDay/worstDay는 요일만 (월, 화, 수 ...)
+- bestDay: days 배열에서 score가 가장 높은 날의 요일 (동점이면 용신 오행 일치 날 우선)
+- worstDay: days 배열에서 score가 가장 낮은 날의 요일 (동점이면 기신 오행·충일 날 우선)
+- bestDay/worstDay는 요일만 (월, 화, 수 ...) — days 배열의 score와 반드시 일치해야 함
 - 구체적이고 실용적인 조언 포함
 - keywords는 이모지+단어 조합 3개`
 
@@ -354,7 +356,7 @@ export async function generateWeeklyReading(
     ? `\n용신/기신 일진 오행 사전 계산:\n${yongshinAdjNotes.join('\n')}`
     : ''
 
-  // 공망일(空亡日) 사전 계산
+  // 공망일(空亡日) 사전 계산 + 공망 해소(空亡解消) 체크
   const gongmangJiList = detail.gongmangPillars?.map((p: { ji: string }) => p.ji) || []
   const gongmangNotes = weekDates.map((dateStr, i) => {
     const [ay, am, ad] = dateStr.split('-').map(Number)
@@ -363,10 +365,40 @@ export async function generateWeeklyReading(
     if (gongmangJiList.includes(dayJi)) {
       return `  · ${dayNames[i]}요일: 공망일(空亡日) — 일진 ${dayJi}가 사용자 공망 → 추가 -5점`
     }
+    // 공망 해소: 일진 지지가 공망 지지를 충(冲)하면 공망이 해소되어 +3점
+    const resolves = gongmangJiList.filter((gji: string) =>
+      CHUNG_PAIRS_W.some(([a, b]) => (dayJi === a && gji === b) || (dayJi === b && gji === a))
+    )
+    if (resolves.length > 0) {
+      return `  · ${dayNames[i]}요일: 공망 해소(空亡解消) — 일진 ${dayJi}가 공망 ${resolves.join('·')}을(를) 충(冲) → 공망 해소, 추가 +3점`
+    }
     return null
   }).filter(Boolean)
   const gongmangNote = gongmangNotes.length > 0
     ? `\n공망일 사전 계산:\n${gongmangNotes.join('\n')}`
+    : ''
+
+  // 일진 간 충(冲) 사전 계산 — 같은 주 내 서로 충이 되는 일진 쌍 (양쪽 날 각각 -5점)
+  const allWeekDayJis = weekDates.map(dateStr => {
+    const [ay, am, ad] = dateStr.split('-').map(Number)
+    return calculateSaju(ay, am, ad).dayPillar[1]
+  })
+  const interDayChungNotes: string[] = []
+  for (let ci = 0; ci < 7; ci++) {
+    for (let cj = ci + 1; cj < 7; cj++) {
+      const isChung = CHUNG_PAIRS_W.some(([a, b]) =>
+        (allWeekDayJis[ci] === a && allWeekDayJis[cj] === b) ||
+        (allWeekDayJis[ci] === b && allWeekDayJis[cj] === a)
+      )
+      if (isChung) {
+        interDayChungNotes.push(
+          `  · ${dayNames[ci]}요일(${allWeekDayJis[ci]})↔${dayNames[cj]}요일(${allWeekDayJis[cj]}): 일진 간 충(冲) → 양쪽 날 각각 추가 -5점`
+        )
+      }
+    }
+  }
+  const interDayChungNote = interDayChungNotes.length > 0
+    ? `\n일진 간 충(冲) 사전 계산:\n${interDayChungNotes.join('\n')}`
     : ''
 
   const userPrompt = `${birthDate}생 사용자의 이번 주(${weekStart} ~ ${weekDates[6]}) 운세를 분석해주세요.
@@ -376,6 +408,7 @@ export async function generateWeeklyReading(
 - 월주: ${saju.monthPillar} (${saju.monthPillarHanja})
 - 일주: ${saju.dayPillar} (${saju.dayPillarHanja})${saju.hourPillar ? `\n- 시주: ${saju.hourPillar} (${saju.hourPillarHanja})` : ''}
 - 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+- 희신(喜神): ${yongshin.heungshin}
 - 기신(忌神): ${yongshin.heukshin}
 
 이번 주 일진(日辰):
@@ -402,7 +435,7 @@ ${weekDates.map((d, i) => `- ${dayNames[i]}요일 (${d}): 일진 ${dayIljin[i]}`
 - 방합(方合): 일진 지지 + 사주 지지 2개가 방합 그룹(인묘진·사오미·신유술·해자축) 완성이면 추가 +6점
 - 반방합(半方合): 일진 지지 + 사주 지지 1개가 방합 그룹 내 2개 구성이면 추가 +3점
 - 공망일(空亡日): 일진 지지가 사용자 공망과 일치하면 추가 -5점 (기대·계획 변수)
-- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${gongmangNote}${samhapAdjNote}${banghapAdjNote}${hyeongNote}${yongshinAdjNote}`
+- 형(刑): 삼형(인신사/축술미) 부분형 -4점·완성 -8점, 자묘형 -4점, 자형(오진유해) -3점${dayAdjNote}${ganAdjNote}${yearMonthAdjNote}${hourAdjNote}${interDayChungNote}${gongmangNote}${samhapAdjNote}${banghapAdjNote}${hyeongNote}${yongshinAdjNote}`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

@@ -146,7 +146,7 @@ export async function generateTarotReading(
 - 격국: ${detail.geokguk}
 - 납음오행(일주): ${dayNapum.name}(${dayNapum.element}오행)
 - 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
-- 기신(忌神): ${yongshin.heukshin} / 구신(仇神): ${yongshin.boekshin}
+- 희신(喜神): ${yongshin.heungshin} / 기신(忌神): ${yongshin.heukshin} / 구신(仇神): ${yongshin.boekshin}
 - 십성 위치별 구성: ${sipseongByPosition.join(', ') || '없음'}
   (년주=초년·조상운, 월주=사회·부모운, 일지=배우자·내면, 시주=자녀·말년운)
 - 신살: ${detail.sinsal.length > 0 ? detail.sinsal.map(s => s.name).join(', ') : '없음'}
@@ -179,7 +179,15 @@ ${cardLines}
 이 3장의 카드 의미를 깊이 반영하여 운세를 해석해주세요.
 - 역방향 카드는 위 명시된 고유 의미를 정확히 반영하세요 (단순 "지연"이 아닌 카드별 특수 에너지)
 - 정방향 카드의 긍정적 흐름과 역방향의 내적 갈등을 대비하여 운세에 반영하세요
-- 3장 카드 간의 흐름(과거→현재→미래)을 이어지는 이야기로 구성해주세요`
+- 3장 카드 간의 흐름(과거→현재→미래)을 이어지는 이야기로 구성해주세요
+[3장 스프레드 위치별 해석 기준]
+· 1번(과거·현재): 현재 상황의 뿌리와 배경 — 지금 상태를 만든 원인, 현재 에너지의 원천
+· 2번(도전·과제): 현재 직면한 장애물 또는 핵심 과제 — 넘어야 할 벽 또는 집중해야 할 것
+· 3번(미래·조언): 앞으로의 방향과 조언 — 1번의 흐름이 2번 과제를 거쳐 3번으로 귀결되는 결말
+· 카드 간 연결: 1→2→3의 에너지 흐름이 하나의 서사(narrative)를 형성하도록 분석하세요
+  예) 1번 역방향(과거 혼란) → 2번 정방향(현재 도전이 기회) → 3번 정방향(미래 성취) = "혼란을 딛고 도전하면 성공"
+  예) 1번 정방향(과거 성취) → 2번 역방향(현재 장벽) → 3번 정방향(미래 돌파) = "성취 이후 시련, 그러나 결국 돌파"
+· 세 카드의 오행 조합도 사주 용신/기신과 연결하여 sajuAnalysis에 반영하세요`
   }
 
   const message = await anthropic.messages.create({

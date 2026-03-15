@@ -1,7 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getDetailedAnalysis, getYongshin, getSipseong, calculateDaeunStartAge, calculateDaeunPillars, getSamjae, getYearJi } from '@/lib/utils/saju'
+import { getDetailedAnalysis, getYongshin, getSipseong, calculateDaeunStartAge, calculateDaeunPillars, getSamjae, getYearJi, getSipiuUnsung } from '@/lib/utils/saju'
 
 export interface CareerSajuResponse {
   aptitudeType: string           // 적성 유형 (예: "창조적 리더형 🦁")
@@ -64,7 +64,23 @@ const SYSTEM_PROMPT = `당신은 사주명리 직업·적성 전문가입니다.
 - avoidFields 정확히 3개
 - careerTimeline 정확히 6개
 - score 0-100 정수
-- 일간 오행(木/火/土/金/水)과 격국 원리에 기반한 구체적 분석`
+- 일간 오행(木/火/土/金/水)과 격국 원리에 기반한 구체적 분석
+
+[avoidFields 판정 기준 — 기신(忌神) 오행 + 격국 역선택]
+기피 직군은 아래 원칙으로 선정하세요:
+· 기신(忌神) 오행 관련 직군 우선 기피:
+  - 기신이 목(木): 교육·의료·환경·출판 계열 (목 에너지 과잉 직군)
+  - 기신이 화(火): IT·미디어·엔터·광고·전기 계열
+  - 기신이 토(土): 부동산·건설·농업·요식업 계열
+  - 기신이 금(金): 법률·금융·제조·군경·IT하드웨어 계열
+  - 기신이 수(水): 무역·유통·물류·관광·해운 계열
+· 격국 역선택 (격국이 의미하는 십성의 반대 직군):
+  - 관성격 → 불규칙·프리랜서·자영업 기피 (조직 안정이 적합)
+  - 식상격 → 규칙적 반복 사무·관료 기피 (창의 환경이 적합)
+  - 재성격 → 공직·비영리·학계 기피 (수익 중심 환경이 적합)
+  - 인성격 → 영업·단순 서비스·육체 노동 기피 (학문·상담이 적합)
+· 신약(身弱) 사주: 경쟁 극심·체력 소모 직군(스포츠·군경·영업 최전방) 기피
+· 신강(身强) 사주: 수동·종속·단순 반복 직군(단순 사무·보조 역할) 기피`
 
 export async function generateCareerSaju(
   birthDate: string,
@@ -86,21 +102,9 @@ export async function generateCareerSaju(
     : []
 
   // 십이운성 기반 대운 강약 판정
-  const SIPIU_C: Record<string, Record<string, string>> = {
-    '갑': {'해':'장생','자':'목욕','축':'관대','인':'임관','묘':'제왕','진':'쇠','사':'병','오':'사','미':'묘','신':'절','유':'태','술':'양'},
-    '을': {'오':'장생','사':'목욕','진':'관대','묘':'임관','인':'제왕','축':'쇠','자':'병','해':'사','술':'묘','유':'절','신':'태','미':'양'},
-    '병': {'인':'장생','묘':'목욕','진':'관대','사':'임관','오':'제왕','미':'쇠','신':'병','유':'사','술':'묘','해':'절','자':'태','축':'양'},
-    '무': {'인':'장생','묘':'목욕','진':'관대','사':'임관','오':'제왕','미':'쇠','신':'병','유':'사','술':'묘','해':'절','자':'태','축':'양'},
-    '정': {'유':'장생','신':'목욕','미':'관대','오':'임관','사':'제왕','진':'쇠','묘':'병','인':'사','축':'묘','자':'절','해':'태','술':'양'},
-    '기': {'유':'장생','신':'목욕','미':'관대','오':'임관','사':'제왕','진':'쇠','묘':'병','인':'사','축':'묘','자':'절','해':'태','술':'양'},
-    '경': {'사':'장생','오':'목욕','미':'관대','신':'임관','유':'제왕','술':'쇠','해':'병','자':'사','축':'묘','인':'절','묘':'태','진':'양'},
-    '신': {'자':'장생','해':'목욕','술':'관대','유':'임관','신':'제왕','미':'쇠','오':'병','사':'사','진':'묘','묘':'절','인':'태','축':'양'},
-    '임': {'신':'장생','유':'목욕','술':'관대','해':'임관','자':'제왕','축':'쇠','인':'병','묘':'사','진':'묘','사':'절','오':'태','미':'양'},
-    '계': {'묘':'장생','인':'목욕','축':'관대','자':'임관','해':'제왕','술':'쇠','유':'병','신':'사','미':'묘','오':'절','사':'태','진':'양'},
-  }
   const dayGanC = detail.dayMaster.name[0]
   const daeunStrengthNote = daeunPillarsC.slice(0, 6).map(d => {
-    const unsung = (SIPIU_C[dayGanC] || {})[d.pillar[1]] || '불명'
+    const unsung = getSipiuUnsung(dayGanC, d.pillar[1])
     const mark = unsung === '제왕' ? ' ★★★절정' : unsung === '임관' ? ' ★★상승' : ['장생','관대'].includes(unsung) ? ' ★좋음' : ['묘','절'].includes(unsung) ? ' ▼▼정체' : ['병','사'].includes(unsung) ? ' ▼하향' : ''
     const ganSipseongC = getSipseong(dayGanC, d.pillar[0])
     return `  · ${d.age}세 대운 ${d.pillar}(${d.hanja}): 십이운성 ${unsung}${mark} / 천간십성 ${ganSipseongC}`
@@ -168,6 +172,7 @@ export async function generateCareerSaju(
 - 강한 오행: ${detail.dominantElement} / 약한 오행: ${detail.weakElement}
 - 십성 구성: ${sipseongList}
 - 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+- 희신(喜神): ${yongshin.heungshin}
 - 기신(忌神): ${yongshin.heukshin}
 - 신살: ${detail.sinsal.length > 0 ? detail.sinsal.map(s => s.name).join(', ') : '없음'}
 
@@ -237,7 +242,7 @@ ${Array.from({ length: 12 }, (_, i) => {
   const ms = (() => { try { return calculateSaju(currentYear, m, 20) } catch { return null } })()
   if (!ms) return null
   const ji = ms.monthPillar[1]
-  const unsung = (SIPIU_C[dayGanC] || {})[ji] || '불명'
+  const unsung = getSipiuUnsung(dayGanC, ji)
   const mark = unsung === '제왕' ? ' ★★★절정운' : unsung === '임관' ? ' ★★상승운' : ['장생', '관대'].includes(unsung) ? ' ★좋음' : ['묘', '절'].includes(unsung) ? ' ▼▼정체주의' : ['병', '사'].includes(unsung) ? ' ▼하향주의' : ''
   return `  · ${m}월(${ms.monthPillar}): 십이운성 ${unsung}${mark}`
 }).filter(Boolean).join('\n')}`

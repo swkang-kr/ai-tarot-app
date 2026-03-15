@@ -225,8 +225,8 @@ export async function generateDeepCompatibility(
   const yongshin1 = getYongshin(person1Saju, detail1)
   const yongshin2 = getYongshin(person2Saju, detail2)
   const yongshinNote = `\n용신/기신 교차 분석 (궁합 오행 상성의 핵심):
-- 첫 번째 사람 신강/신약: ${detail1.bodyStrength} / 용신(用神): ${yongshin1.yongshinFull} / 기신(忌神): ${yongshin1.heukshin}
-- 두 번째 사람 신강/신약: ${detail2.bodyStrength} / 용신(用神): ${yongshin2.yongshinFull} / 기신(忌神): ${yongshin2.heukshin}
+- 첫 번째 사람 신강/신약: ${detail1.bodyStrength} / 용신(用神): ${yongshin1.yongshinFull} / 희신(喜神): ${yongshin1.heungshin} / 기신(忌神): ${yongshin1.heukshin}
+- 두 번째 사람 신강/신약: ${detail2.bodyStrength} / 용신(用神): ${yongshin2.yongshinFull} / 희신(喜神): ${yongshin2.heungshin} / 기신(忌神): ${yongshin2.heukshin}
 ※ A의 용신 오행 = B의 일간 오행 → A에게 B는 에너지원, 궁합 긍정적
 ※ A의 기신 오행 = B의 일간 오행 → A에게 B는 스트레스 요인, 갈등 주의
 ※ 신강+신약 조합: 상호 보완적 역할 분담 가능`

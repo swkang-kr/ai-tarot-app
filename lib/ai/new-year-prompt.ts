@@ -1,7 +1,7 @@
 import { anthropic } from '@/lib/ai/client'
 import { calculateSaju } from '@fullstackfamily/manseryeok'
 import type { SajuInfo } from '@/lib/utils/saju'
-import { getDetailedAnalysis, getYongshin, getSipseong, getNapumOhaeng, getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars } from '@/lib/utils/saju'
+import { getDetailedAnalysis, getYongshin, getSipseong, getNapumOhaeng, getSamjae, getYearJi, calculateDaeunStartAge, calculateDaeunPillars, getSipiuUnsung } from '@/lib/utils/saju'
 
 export interface NewYearResponse {
   zodiacSign: string           // 예: "병오(丙午)년 말띠"
@@ -154,23 +154,16 @@ export async function generateNewYearReading(
     '자': '수', '축': '토', '인': '목', '묘': '목', '진': '토', '사': '화',
     '오': '화', '미': '토', '신': '금', '유': '금', '술': '토', '해': '수',
   }
-  const SIPIU_NY: Record<string, Record<string, string>> = {
-    '갑': {'해':'장생','자':'목욕','축':'관대','인':'임관','묘':'제왕','진':'쇠','사':'병','오':'사','미':'묘','신':'절','유':'태','술':'양'},
-    '을': {'오':'장생','사':'목욕','진':'관대','묘':'임관','인':'제왕','축':'쇠','자':'병','해':'사','술':'묘','유':'절','신':'태','미':'양'},
-    '병': {'인':'장생','묘':'목욕','진':'관대','사':'임관','오':'제왕','미':'쇠','신':'병','유':'사','술':'묘','해':'절','자':'태','축':'양'},
-    '무': {'인':'장생','묘':'목욕','진':'관대','사':'임관','오':'제왕','미':'쇠','신':'병','유':'사','술':'묘','해':'절','자':'태','축':'양'},
-    '정': {'유':'장생','신':'목욕','미':'관대','오':'임관','사':'제왕','진':'쇠','묘':'병','인':'사','축':'묘','자':'절','해':'태','술':'양'},
-    '기': {'유':'장생','신':'목욕','미':'관대','오':'임관','사':'제왕','진':'쇠','묘':'병','인':'사','축':'묘','자':'절','해':'태','술':'양'},
-    '경': {'사':'장생','오':'목욕','미':'관대','신':'임관','유':'제왕','술':'쇠','해':'병','자':'사','축':'묘','인':'절','묘':'태','진':'양'},
-    '신': {'자':'장생','해':'목욕','술':'관대','유':'임관','신':'제왕','미':'쇠','오':'병','사':'사','진':'묘','묘':'절','인':'태','축':'양'},
-    '임': {'신':'장생','유':'목욕','술':'관대','해':'임관','자':'제왕','축':'쇠','인':'병','묘':'사','진':'묘','사':'절','오':'태','미':'양'},
-    '계': {'묘':'장생','인':'목욕','축':'관대','자':'임관','해':'제왕','술':'쇠','유':'병','신':'사','미':'묘','오':'절','사':'태','진':'양'},
-  }
   const userAllJiNY = [saju.yearPillar[1], saju.monthPillar[1], saju.dayPillar[1], ...(saju.hourPillar ? [saju.hourPillar[1]] : [])]
   const yongshinShortNY = yongshin.yongshin
   const heukshinShortNY = yongshin.heukshin.split('(')[0]
+  // 천간합·충 상수
+  const CHEONGAN_HAP_NY: [string, string][] = [['갑','기'],['을','경'],['병','신'],['정','임'],['무','계']]
+  const CHEONGAN_CHUNG_NY: [string, string][] = [['갑','경'],['을','신'],['병','임'],['정','계']]
+  const allUserGanNY = [saju.yearPillar[0], saju.monthPillar[0], saju.dayPillar[0], ...(saju.hourPillar ? [saju.hourPillar[0]] : [])]
+  const gongmangJiListNY = detail.gongmangPillars?.map((p: { ji: string }) => p.ji) || (detail.gongmang ? [...detail.gongmang] : [])
 
-  // 12개월 월운(月運) 천간지지 + 월간십성 + 월지↔일지/년지 충합 사전 계산 — 각 달 20일 기준 (절기 중반)
+  // 12개월 월운(月運) 천간지지 + 월간십성 + 월지↔일지/년지/월지 충합 + 천간합충 + 공망 사전 계산
   const dayGanForSipseongNY = saju.dayPillar[0]
   const monthPillarsNY = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1
@@ -185,8 +178,13 @@ export async function generateNewYearReading(
       adjNotes.push('일지합(+6점)')
     if (CHUNG_PAIRS_NY.some(([a, b]) => (mJi === a && userYearJi === b) || (mJi === b && userYearJi === a)))
       adjNotes.push('년지충(-4점)')
-    if (YUKHAP_PAIRS_NY.some(([a, b]) => (mJi === a && userYearJi === b) || (mJi === b && userYearJi === a)))
+    else if (YUKHAP_PAIRS_NY.some(([a, b]) => (mJi === a && userYearJi === b) || (mJi === b && userYearJi === a)))
       adjNotes.push('년지합(+3점)')
+    // 월지충합 — annual/manseryeok과 동일 기준
+    if (CHUNG_PAIRS_NY.some(([a, b]) => (mJi === a && userMonthJi === b) || (mJi === b && userMonthJi === a)))
+      adjNotes.push('월지충(-5점)')
+    else if (YUKHAP_PAIRS_NY.some(([a, b]) => (mJi === a && userMonthJi === b) || (mJi === b && userMonthJi === a)))
+      adjNotes.push('월지합(+4점)')
     // 형(刑) 체크
     for (const group of [['인', '신', '사'], ['축', '술', '미']]) {
       if (group.includes(mJi)) {
@@ -199,6 +197,21 @@ export async function generateNewYearReading(
       adjNotes.push('자묘형(-4점)')
     if (['오', '진', '유', '해'].includes(mJi) && userAllJiNY.includes(mJi))
       adjNotes.push('자형(-3점)')
+    // 천간합·충 사전 계산
+    const mGanNY = mp[0]
+    const ganHapNY = allUserGanNY.find(ug => CHEONGAN_HAP_NY.some(([a, b]) => (mGanNY === a && ug === b) || (mGanNY === b && ug === a)))
+    const ganChungNY = allUserGanNY.find(ug => CHEONGAN_CHUNG_NY.some(([a, b]) => (mGanNY === a && ug === b) || (mGanNY === b && ug === a)))
+    if (ganHapNY) adjNotes.push(`천간합(${mGanNY}${ganHapNY},+5점)`)
+    if (ganChungNY) adjNotes.push(`천간충(${mGanNY}↔${ganChungNY},-8점)`)
+    // 공망달(-5점) / 공망 해소(+3점)
+    if (gongmangJiListNY.includes(mJi)) {
+      adjNotes.push('공망달(-5점)')
+    } else {
+      const resolvesNY = gongmangJiListNY.filter((gji: string) =>
+        CHUNG_PAIRS_NY.some(([a, b]) => (mJi === a && gji === b) || (mJi === b && gji === a))
+      )
+      if (resolvesNY.length > 0) adjNotes.push('공망해소(+3점)')
+    }
     // 용신/기신 오행 체크
     const ganElNY = GAN_EL_NY[mp[0]] || ''
     const jiElNY = JI_EL_NY[mJi] || ''
@@ -207,7 +220,7 @@ export async function generateNewYearReading(
     else if (ganElNY === heukshinShortNY || jiElNY === heukshinShortNY)
       adjNotes.push('기신달(-8점)')
     // 십이운성
-    const unsungNY = (SIPIU_NY[dayGanForSipseongNY] || {})[mJi] || '불명'
+    const unsungNY = getSipiuUnsung(dayGanForSipseongNY, mJi)
     const markNY = unsungNY === '제왕' ? '★★★절정' : unsungNY === '임관' ? '★★상승' : ['장생', '관대'].includes(unsungNY) ? '★좋음' : ['묘', '절'].includes(unsungNY) ? '▼▼주의' : ['병', '사'].includes(unsungNY) ? '▼하향' : ''
     const adjStr = adjNotes.length > 0 ? ` [${adjNotes.join(' ')}]` : ''
     return `  · ${m}월: ${mp}(${GAN_HANJA_NY[mp[0]] || ''}${JI_HANJA_NY[mp[1]] || ''}) 월간십성: ${sipseong} 십이운성: ${unsungNY}${markNY ? `(${markNY})` : ''}${adjStr}`
@@ -234,6 +247,27 @@ export async function generateNewYearReading(
 대운 기운을 세운·월운과 교차하여 yearSummary·fourPillarsAdvice·bestCareerPeriod에 반영하세요.`
   }
 
+  // 세운 천간 × 대운 천간 교차분석 — annual-prompt.ts와 동일 패턴
+  let seunDaeunCrossNY = ''
+  if (gender) {
+    const birthYearGanForCross = saju.yearPillar[0]
+    const isYangForCross = ['갑', '병', '무', '경', '임'].includes(birthYearGanForCross)
+    const daeunDirForCross = gender === 'male' ? (isYangForCross ? '순행' : '역행') : (isYangForCross ? '역행' : '순행')
+    const daeunStartForCross = calculateDaeunStartAge(birthDate, birthYearGanForCross, gender)
+    const daeunPillarsForCross = calculateDaeunPillars(saju.monthPillar, daeunDirForCross === '순행' ? 'forward' : 'reverse', daeunStartForCross, 8)
+    const birthYearForCross = parseInt(birthDate.split('-')[0])
+    const currentAgeForCross = targetYear - birthYearForCross + 1
+    const currentDaeunForCross = daeunPillarsForCross.findLast(d => d.age <= currentAgeForCross)
+    if (currentDaeunForCross) {
+      const seunGanNY = seunPillar[0]
+      const daeunGanNY = currentDaeunForCross.pillar[0]
+      const isHap = CHEONGAN_HAP_NY.some(([a, b]) => (seunGanNY === a && daeunGanNY === b) || (seunGanNY === b && daeunGanNY === a))
+      const isChung = CHEONGAN_CHUNG_NY.some(([a, b]) => (seunGanNY === a && daeunGanNY === b) || (seunGanNY === b && daeunGanNY === a))
+      if (isHap) seunDaeunCrossNY = `\n[세운×대운 천간 교차분석]\n  ✅ 세운 천간(${seunGanNY}) × 대운 천간(${daeunGanNY}): 천간합 — 큰 흐름 상호 협력, yearSummary +5점 기준`
+      else if (isChung) seunDaeunCrossNY = `\n[세운×대운 천간 교차분석]\n  ⚠️ 세운 천간(${seunGanNY}) × 대운 천간(${daeunGanNY}): 천간충 — 내외 흐름 충돌, yearSummary -8점 기준`
+    }
+  }
+
   const userPrompt = `${birthDate}생 사용자의 ${targetYear}년 신년운세를 분석해주세요.
 
 사주팔자:
@@ -244,6 +278,7 @@ export async function generateNewYearReading(
 일간(日干): ${saju.dayPillar[0]} — ${detail.bodyStrength}, ${detail.geokguk}
 납음오행(納音五行): ${napum.name}(${napum.element}) — 생년 기반 근본 기운, yearSummary에 자연스럽게 반영
 용신(用神): ${yongshin.yongshinFull} — ${yongshin.reason}
+희신(喜神): ${yongshin.heungshin}
 기신(忌神): ${yongshin.heukshin}
 
 [용신 오행별 luckyItems 매핑 — 다음 표를 정확히 사용하세요]
@@ -269,6 +304,12 @@ ${monthPillarsNY.join('\n')}
 - [일지합] 표시된 달: score에 추가 +6점 적용
 - [년지충] 표시된 달: score에서 추가 -4점 적용
 - [년지합] 표시된 달: score에 추가 +3점 적용
+- [월지충] 표시된 달: score에서 추가 -5점 적용
+- [월지합] 표시된 달: score에 추가 +4점 적용
+- [천간합] 표시된 달: score에 추가 +5점 적용
+- [천간충] 표시된 달: score에서 추가 -8점 적용
+- [공망달] 표시된 달: score에서 추가 -5점 적용
+- [공망해소] 표시된 달: score에 추가 +3점 적용${seunDaeunCrossNY}
 
 삼재(三災): ${samjaeNY.isSamjae ? `⚠️ ${samjaeNY.type} — ${samjaeNY.description}` : '해당 없음'}${samjaeNY.isSamjae ? `
 - 삼재 해당: yearSummary·annualAdvice·monthHighlights에 반드시 반영하세요
